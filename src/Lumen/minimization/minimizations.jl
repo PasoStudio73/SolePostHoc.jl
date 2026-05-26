@@ -1,4 +1,71 @@
 # ---------------------------------------------------------------------------- #
+#                   initial minimization algorithms setup                      #
+# ---------------------------------------------------------------------------- #
+"""
+    setup_espresso() -> String
+
+Automatically locate and validate the Espresso logic minimizer binary.
+
+Attempts to load the MIT Espresso binary via `SoleData.MITESPRESSOLoader`.
+If the binary cannot be found or loaded, an informative error is raised.
+
+# Returns
+- `String`: Absolute path to the verified Espresso executable.
+
+# Throws
+- `ErrorException`: If the loader fails or the binary is not found
+  at the expected path.
+
+# Notes
+This function is called internally by the LUMEN pipeline when `:mitespresso` is
+selected as the minimization scheme.
+
+See also: [`setup_abc`](@ref), [`lumen`](@ref)
+"""
+function setup_espresso()
+    # auto setup espresso binary if not specified
+    espressobinary = try
+        joinpath(SD.load(SD.MITESPRESSOLoader()), "espresso")
+    catch e
+        error("Failed to setup espresso binary: $e")
+    end
+
+    # verify that binary exists and is executable
+    isfile(espressobinary) ||
+        error("espresso binary not found at $espressobinary")
+
+    return espressobinary
+end
+
+"""
+    setup_boom() -> Nothing
+
+Placeholder for the BOOM minimizer setup routine.
+
+This function is reserved for future integration of the BOOM logic minimization
+tool. Currently a no-op pending evaluation of the minimizer.
+
+# Notes
+- Not yet implemented.
+- TODO: evaluate and implement this minimizer.
+"""
+function setup_boom() end # TODO: evaluate this minimizer
+
+"""
+    setup_quine() -> Nothing
+
+Placeholder for the Quine–McCluskey minimizer setup routine.
+
+Reserved for future integration of the Quine–McCluskey algorithm. Currently a
+no-op pending evaluation.
+
+# Notes
+- Not yet implemented.
+- TODO: evaluate and implement this minimizer.
+"""
+function setup_quine() end # TODO: evaluate this minimizer
+
+# ---------------------------------------------------------------------------- #
 #                                     abc                                      #
 # ---------------------------------------------------------------------------- #
 function abc_minimize(
@@ -93,78 +160,6 @@ function run_minimization(
         )
         return refine_dnf(minimized_formula)
     end
-end
-
-function run_minimization(
-    model::SM.DecisionEnsemble{M},
-    rules::Vector{T},
-    classnames::Vector{S},
-    featurenames::Vector{S},
-    type::Type=Float64
-) where {M,T<:SM.DecisionSet,S<:SM.CLabel}
-    # nclasses = length(classnames)
-    # rules = reduce(vcat, SM.rules.(rules))
-    # classrules = [
-    #     filter(r -> SM.outcome(SM.consequent(r)) == c, rules) 
-    #     for c in classnames
-    # ]
-
-    # ensemble_atoms = [Vector{SL.Atom}(collect_atoms(cr)) for cr in classrules]
-
-    # formulas = Vector{Vector{Union{
-    #     SL.LeftmostConjunctiveForm{SL.Atom},
-    #     SL.SyntaxStructure
-    # }}}(undef, nclasses)
-
-    # Threads.@threads for i in 1:nclasses
-    #     filtered = filter(!isempty, ensemble_atoms)
-    #     formulas[i] = isempty(filtered) ?
-    #         SL.Atom{SD.AbstractCondition}[] :
-    #         run_minimization(Val(:abc), ensemble_atoms, Float64)
-    # end
-
-    # valid_mask = .!isempty.(formulas)
-    # return formulas[valid_mask], classnames[valid_mask]
-
-    nclasses = length(classnames)
-    rules = reduce(vcat, SM.rules.(rules))
-    classrules = [
-        filter(r -> SM.outcome(SM.consequent(r)) == c, rules) 
-        for c in classnames
-    ]
-
-    ensemble_atoms = [Vector{SL.Atom{SD.AbstractCondition}}(collect_atoms(cr)) for cr in classrules]
-
-    for atoms in ensemble_atoms
-        features = RuleExtractions.get_features(atoms)
-
-        thresholds = RuleExtractions.extract_thresholds(
-            atoms,
-            features,
-            featurenames,
-            type;
-            prev=false
-        )
-        combinations = RuleExtractions.extract_combinations(
-            RuleExtractions.extract_thresholds(atoms, features, featurenames, type; prev=true)
-        )
-        predictions = RuleExtractions.collect_predictions(model, combinations)
-        formulas = RuleExtractions.collect_formulas(
-            classnames,
-            predictions,
-            combinations,
-            thresholds,
-            featurenames,
-            nclasses,
-            type
-        )
-
-        valid_mask = .!isempty.(formulas)
-        formulas = formulas[valid_mask]
-        classnames = classnames[valid_mask]
-    end
-
-    return formulas, classnames
 end
 
 """

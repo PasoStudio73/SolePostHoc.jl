@@ -29,6 +29,21 @@ const LiteralBool = Dict('1' => true, '0' => false)
 # ---------------------------------------------------------------------------- #
 #                                 print utils                                  #
 # ---------------------------------------------------------------------------- #
+"""
+    _featurename(f::SD.VariableValue) -> String
+
+Return a human-readable name for a `VariableValue` feature.
+
+If the feature carries an explicit name (`i_name`), it is returned wrapped in
+square brackets. Otherwise the fallback `"V<index>"` string is produced using
+the feature's integer index (`i_variable`).
+
+# Arguments
+- `f::SD.VariableValue`: The feature descriptor to format.
+
+# Returns
+- `String`: Either `"[<name>]"` or `"V<index>"`.
+"""
 function _featurename(f::SD.VariableValue)
     return if isnothing(f.i_name)
         f.i_variable isa Union{Symbol,AbstractString} ?
