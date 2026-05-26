@@ -1,7 +1,5 @@
 module REFNE
 
-# using Revise
-# using Pkg
 using IterTools, DataFrames
 using DecisionTree: load_data, build_forest, apply_forest
 

@@ -1,8 +1,7 @@
 module RuleExtraction
 
 using Reexport
-# using Test     --- not needed
-using ThreadsX
+
 using Random
 using StatsBase
 
@@ -23,7 +22,6 @@ using SoleModels: CLabel, RLabel, Label
 using SoleModels: bestguess, evaluaterule
 
 # using SoleFeatures: findcorrelation
-
 # using Statistics: cor
 
 using SoleModels: RuleExtractor

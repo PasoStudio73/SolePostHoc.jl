@@ -1,4 +1,0 @@
-
-[pip.deps]
-scikit-learn = ""
-rulecosi = "@ git+https://github.com/jobregon1212/rulecosi.git"

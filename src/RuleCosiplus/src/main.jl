@@ -6,7 +6,6 @@ using Random
 using JSON
 using SoleModels
 using SoleLogics
-import Dates: now
 using DataStructures
 using CategoricalArrays
 

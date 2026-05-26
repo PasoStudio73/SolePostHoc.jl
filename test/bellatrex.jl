@@ -1,7 +1,3 @@
-pwd()
-Pkg.activate()
-Pkg.add("PyCall")
-
 using PyCall
 @pyimport bellatrex
 using SolePostHoc

@@ -1,11 +1,5 @@
-# using Pkg
-# Pkg.activate(".")
-# using Revise
 using Random
-using Logging
-using Dates
 using DataStructures
-# using ScikitLearn
 using SoleModels
 using DecisionTree: load_data, build_forest, apply_forest
 using AbstractTrees
@@ -17,7 +11,6 @@ using SoleLogics
 using DataFrames
 
 using Base.Threads: Atomic, atomic_add!
-using Profile
 using ConcurrentCollections
 using DelimitedFiles
 using StatsBase
