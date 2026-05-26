@@ -31,7 +31,6 @@ validation and resolves the correct minimizer binary before storing anything.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `minimization_scheme` | `Symbol` | `:abc` | DNF minimization algorithm to use. |
-| `binary` | `String` | *(auto)* | Absolute path to the minimizer executable, resolved automatically from `minimization_scheme`. |
 | `depth` | `Float64` | `1.0` | Fraction of each tree's BFS-ordered atoms to include ∈ (0, 1]. `1.0` uses the full alphabet. |
 | `vertical` | `Float64` | `1.0` | Instance-coverage parameter α ∈ (0, 1]. |
 | `horizontal` | `Float64` | `1.0` | Feature-coverage parameter β ∈ (0, 1]. |
@@ -49,10 +48,7 @@ validation and resolves the correct minimizer binary before storing anything.
 | `:mitespresso` | MIT Espresso | Balanced speed / quality. |
 | `:boom` | BOOM | Aggressive minimisation. |
 | `:abc` | Berkeley ABC | Fast, moderate compression. |
-| `:abc_balanced` | Berkeley ABC | Balanced ABC variant. |
-| `:abc_thorough` | Berkeley ABC | Thorough ABC variant. |
 | `:quine` | Quine–McCluskey | Exact minimisation. |
-| `:quine_naive` | Quine–McCluskey | Naïve variant, educational use. |
 
 # Validation
 
@@ -86,7 +82,6 @@ See also: [`lumen`](@ref), [`LumenResult`](@ref), [`AbstractConfig`](@ref)
 """
 struct LumenConfig <: AbstractConfig
     minimization_scheme::Symbol
-    binary::String
     depth::Float64
     vertical::Float64
     horizontal::Float64
@@ -96,7 +91,6 @@ struct LumenConfig <: AbstractConfig
     importance::Vector
     check_opt::Bool
     check_alphabet::Bool
-    use_multithreads::Bool
     float_type::Type
 
     function LumenConfig(;
@@ -110,7 +104,6 @@ struct LumenConfig <: AbstractConfig
         importance::Vector=Float64[],
         check_opt::Bool=false,
         check_alphabet::Bool=false,
-        use_multithreads::Bool=true,
         float_type::Type=Float64
     )
         # validate coverage parameters - must be positive and ≤ 1.0
@@ -128,29 +121,17 @@ struct LumenConfig <: AbstractConfig
         end
 
         # validate minimization scheme
-        valid_schemes = Dict(
-            # :mitespresso => setup_espresso(),
-            :boom => setup_boom(),
-            :abc => setup_abc(),
-            :abc_balanced => setup_abc(),
-            :abc_thorough => setup_abc(),
-            :quine => setup_quine(),
-            :quine_naive => setup_quine()
-        )
+        valid_schemes = [:mitespresso, :boom, :abc, :quine]
 
-        if minimization_scheme ∉ keys(valid_schemes)
+        minimization_scheme ∉ valid_schemes &&
             throw(ArgumentError(
                 "minimization_scheme must be one of: " *
-                "$(keys(valid_schemes) |> collect). " *
+                "$(valid_schemes). " *
                 "Got: $(minimization_scheme)."
             ))
-        end
-
-        binary = valid_schemes[minimization_scheme]
 
         new(
             minimization_scheme,
-            binary,
             depth,
             vertical,
             horizontal,
@@ -160,7 +141,6 @@ struct LumenConfig <: AbstractConfig
             importance,
             check_opt,
             check_alphabet,
-            use_multithreads,
             float_type
         )
     end
@@ -175,13 +155,6 @@ end
 Return the DNF minimization algorithm identifier stored in `r`.
 """
 @inline get_minimization_scheme(r::LumenConfig) = r.minimization_scheme
-
-"""
-    get_binary(r::LumenConfig) -> String
-
-Return the absolute path to the minimizer executable stored in `r`.
-"""
-@inline get_binary(r::LumenConfig) = r.binary
 
 """
     get_depth(r::LumenConfig) -> Float64
@@ -245,8 +218,6 @@ Return `true` if OTT-optimisation validation is enabled in `r`.
 Return `true` if alphabet-analysis diagnostics are enabled in `r`.
 """
 @inline get_check_alphabet(r::LumenConfig) = r.check_alphabet
-
-@inline get_use_multithreads(r::LumenConfig) = r.use_multithreads
 
 """
     get_float_type(r::LumenConfig) -> Type

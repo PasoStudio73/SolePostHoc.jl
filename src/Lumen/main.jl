@@ -15,6 +15,9 @@ using ABC_jll
 
 include("config.jl")
 
+include("minimization/pla.jl")
+include("minimization/minimizations.jl")
+
 export lumen, LumenConfig, LumenResult
 
 const Operators = Union{typeof(<),typeof(>),typeof(≤),typeof(≥)}
@@ -72,143 +75,6 @@ tool. Currently a no-op pending evaluation of the minimizer.
 - TODO: evaluate and implement this minimizer.
 """
 function setup_boom() end # TODO: evaluate this minimizer
-
-function ensure_abc_binary(; force_rebuild=false)
-    # Path to ABC binary directly in src/ directory
-    abc_binary = joinpath(@__DIR__, "abc")
-
-    # Return existing binary if found and not forcing rebuild
-    if isfile(abc_binary) && !force_rebuild
-        @info "ABC binary already exists at: $abc_binary (skipping download/compilation)"
-        return abc_binary
-    end
-
-    @info "Setting up ABC binary..."
-
-    # Create unique temporary directory to avoid conflicts
-    abc_temp_dir = mktempdir(; prefix="abc_build_")
-
-    # ABC repository URL (compressed tarball)
-    abc_url = "https://github.com/berkeley-abc/abc/archive/refs/heads/master.tar.gz"
-
-    try
-        # Download the source code
-        @info "Downloading ABC source code..."
-        tarfile = joinpath(abc_temp_dir, "abc-master.tar.gz")
-        run(`curl -L -o $tarfile $abc_url`)
-
-        # Create subdirectory for extraction to avoid conflicts
-        extract_dir = joinpath(abc_temp_dir, "extract")
-        mkdir(extract_dir)
-
-        # Extract the compressed tarball using system tar command
-        # This handles .tar.gz decompression automatically
-        @info "Extracting ABC source code..."
-        if success(`which tar`)
-            # Use system tar command (handles gzip compression)
-            run(`tar -xzf $tarfile -C $extract_dir`)
-        else
-            error("System tar command not found. Please install tar utilities.")
-        end
-
-        # Path to extracted source code
-        abc_source_dir = joinpath(extract_dir, "abc-master")
-
-        if !isdir(abc_source_dir)
-            error("Failed to extract ABC source code - directory not found")
-        end
-
-        # Compile ABC
-        @info "Compiling ABC... This may take a few minutes."
-
-        # Change to source directory for compilation
-        old_dir = pwd()
-        cd(abc_source_dir)
-
-        try
-            # Verify make is available
-            if !success(`which make`)
-                error(
-                    "make command not found. Please install build tools (make, gcc, etc.)"
-                )
-            end
-
-            # Compile with make
-            run(`make ABC_USE_NO_READLINE=1`)
-
-            # Copy compiled binary to final location
-            compiled_binary = joinpath(abc_source_dir, "abc")
-            if isfile(compiled_binary)
-                cp(compiled_binary, abc_binary; force=true)
-                # Make executable
-                chmod(abc_binary, 0o755)
-                @info "ABC compiled successfully at: $abc_binary"
-            else
-                error("ABC compilation completed but binary not found")
-            end
-
-        finally
-            # Always restore original directory
-            cd(old_dir)
-        end
-
-        return abc_binary
-
-    catch e
-        @error "Failed to download/compile ABC: $e. Consider downloading ABC manually from https://github.com/berkeley-abc/abc"
-        rethrow(e)
-    finally
-        # Always cleanup temporary directory
-        try
-            rm(abc_temp_dir; recursive=true, force=true)
-        catch cleanup_error
-            @warn "Failed to cleanup temporary directory: $cleanup_error"
-        end
-    end
-end
-
-"""
-    setup_abc() -> String
-
-Automatically locate, validate, and smoke-test the ABC logic synthesis binary.
-
-Attempts to load the ABC binary via `SoleData.ABCLoader`. After locating the
-binary it performs a basic health-check by running `abc -h` to ensure the
-executable is functional.
-
-# Returns
-- `String`: Absolute path to the verified ABC executable.
-
-# Throws
-- `ErrorException`: If the loader fails, the binary is missing, 
-  or the health-check invocation raises an exception.
-
-# Notes
-This function is called internally when `:abc` (or its variants) is selected as
-the minimization scheme.
-
-See also: [`setup_espresso`](@ref), [`lumen`](@ref)
-"""
-function setup_abc()
-    # auto setup ABC binary if not specified
-    abcbinary = try
-        ensure_abc_binary()
-    catch e
-        error("Failed to setup ABC binary: $e")
-    end
-
-    # verify that binary exists and is executable
-    isfile(abcbinary) || error("ABC binary not found at $abcbinary")
-
-    # test that ABC binary is working
-    try
-        run(`$abcbinary -h`; wait=false)
-    catch e
-        error("ABC binary are not working properly: $e")
-    end
-
-    return abcbinary
-end
 
 """
     setup_quine() -> Nothing
@@ -1124,7 +990,6 @@ struct ExtractRulesData{
         predictions = get_apply_function(extractor)(
             model,
             d;
-            use_multithreads=get_use_multithreads(extractor),
             suppress_parity_warning=true
         )
 
@@ -1437,83 +1302,6 @@ function _refine_dnf(
 
     # safety check: never return empty formula
     return isempty(kept_terms) ? terms : kept_terms
-end
-
-# ---------------------------------------------------------------------------- #
-#                              minimization core                               #
-# ---------------------------------------------------------------------------- #
-"""
-    run_minimization(
-        ::Val{:abc},
-        extractor::LumenConfig,
-        atoms::Vector{Vector{SL.Atom}}
-    ) -> Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure}}
-
-Minimize the DNF formula encoded by `atoms` using the ABC framework.
-
-Delegates to `SD.abc_minimize` with the binary path from `extractor`, then
-applies [`_refine_dnf`](@ref) to remove dominated terms.
-
-# Arguments
-- `extractor::LumenConfig`: Provides the ABC binary path and depth parameter.
-- `atoms::Vector{Vector{SL.Atom}}`: Per-combination atom lists (one entry per
-  input combination assigned to the target class).
-
-# Returns
-- Minimized and refined vector of conjunctive terms.
-"""
-function run_minimization(
-    ::Val{:abc},
-    extractor::LumenConfig,
-    atoms::Vector{Vector{SL.Atom}}
-)
-    minimized_formula =
-        SD.abc_minimize(
-            atoms,
-            get_binary(extractor);
-            fast=1,
-            depth=get_depth(extractor),
-            float_type=get_float_type(extractor)
-        )
-
-    return _refine_dnf(minimized_formula)
-end
-
-"""
-    run_minimization(
-        ::Val{:mitespresso},
-        extractor::LumenConfig,
-        atoms::Vector{Vector{SL.Atom}}
-    ) -> Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure}}
-
-Minimize the DNF formula encoded by `atoms` using the MIT Espresso minimizer.
-
-Delegates to `SD.espresso_minimize` with the binary path from `extractor`, then
-applies [`_refine_dnf`](@ref) to remove dominated terms.
-
-# Arguments
-- `extractor::LumenConfig`: Provides the Espresso binary path and
-  depth parameter.
-- `atoms::Vector{Vector{SL.Atom}}`: Per-combination atom lists.
-
-# Returns
-- Minimized and refined vector of conjunctive terms.
-"""
-function run_minimization(
-    ::Val{:mitespresso},
-    extractor::LumenConfig,
-    atoms::Vector{Vector{SL.Atom}}
-    # TODO mitespresso_kwargs...
-)
-    minimized_formula =
-        SD.espresso_minimize(
-            atoms,
-            get_binary(extractor);
-            depth=get_depth(extractor),
-            float_type=get_float_type(extractor)
-        )
-
-    return _refine_dnf(minimized_formula)
 end
 
 # ---------------------------------------------------------------------------- #
