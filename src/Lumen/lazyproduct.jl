@@ -9,6 +9,7 @@ struct LazyProduct{T}
     function LazyProduct(arrays::Vector{Vector{T}}) where T
         lengths = [length(a) for a in arrays]
         total = isempty(lengths) ? 0 : prod(lengths)
+        total ≤ 0 && throw(ErrorException("possible out of memory"))
         new{T}(arrays, lengths, total)
     end
 end

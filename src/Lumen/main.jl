@@ -182,7 +182,7 @@ function lumen(
             boundary=true)
     )
 
-    predictions = collect_predictions(model, combinations)
+    predictions = collect_predictions(model, combinations; max_combs, rng)
 
 
 
