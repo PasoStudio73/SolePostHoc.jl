@@ -1,6 +1,40 @@
 # ---------------------------------------------------------------------------- #
 #                               extract atoms                                  #
 # ---------------------------------------------------------------------------- #
+"""
+    extract_atoms(model::SM.Branch{T}; normalize=false, out_unique=true)
+    extract_atoms(
+        model::SM.DecisionTree{T}; normalize=false, out_unique=true
+    )
+    extract_atoms(
+        model::SM.DecisionEnsemble{T}; normalize=false, out_unique=true
+    ) -> Vector{SL.Atom{SD.ScalarCondition}}
+
+Extract all [`SL.Atom{SD.ScalarCondition}`](@ref) leaves from a decision model
+by traversing its branch structure.
+
+Atoms with threshold `Inf` are silently discarded (XGBoost sometimes emits
+them as padding nodes).
+
+# Arguments
+- `model`: A `Branch`, `DecisionTree`, or `DecisionEnsemble` from which atoms
+  are extracted.
+
+# Keyword Arguments
+- `normalize::Bool = false`: When `true`, rewrites atoms using `>` or `≤` into
+  the canonical `<`/`≥` family via [`normalize_atom`](@ref). This is required
+  when a model mixes operator families on the same feature.
+- `out_unique::Bool = true`: When `true`, deduplicates the result with
+  `unique!` before returning.
+
+# Notes
+- `DecisionEnsemble` extraction is parallelized with `Threads.@threads`.
+- For `DecisionEnsemble`, normalization and deduplication are applied once on
+  the merged result, avoiding redundant work per tree.
+
+See also: [`normalize_atom`](@ref), [`validate_operators`](@ref),
+[`get_features`](@ref), [`extract_thresholds`](@ref)
+"""
 function extract_atoms(
     model::SM.Branch{T};
     normalize::Bool=false,
@@ -84,42 +118,6 @@ function get_atoms(
 end
 
 # ---------------------------------------------------------------------------- #
-#                               collect atoms                                  #
-# ---------------------------------------------------------------------------- #
-# collect_atoms!(atoms::Vector{<:SL.Atom}, f::SL.Atom) = push!(atoms, f)
-
-# collect_atoms!(
-#     atoms::Vector{T},
-#     f::SL.Atom
-# ) where {T<:SL.Atom{<:SD.AbstractCondition}} = push!(atoms, f)
-
-# function collect_atoms!(
-#     atoms::Vector{T},
-#     f::SL.SyntaxStructure
-# ) where {T<:SL.Atom{<:SD.AbstractCondition}}
-#     for child in SL.children(f)
-#         collect_atoms!(atoms, child)
-#     end
-#     return atoms
-# end
-
-# function collect_atoms(
-#     f::SL.SyntaxStructure
-# )
-#     atoms = Vector{SL.Atom{<:SD.AbstractCondition}}()
-#     collect_atoms!(atoms, f)
-#     return unique!(atoms)
-# end
-
-# function collect_atoms(f::SM.Rule)
-#     collect_atoms(SM.antecedent(f))
-# end
-
-# function collect_atoms(rules::Vector{<:SM.Rule})
-#     unique!(reduce(vcat, collect_atoms.(rules)))
-# end
-
-# ---------------------------------------------------------------------------- #
 #                            atom normalization                                #
 # ---------------------------------------------------------------------------- #
 """
@@ -200,6 +198,14 @@ Return the feature object embedded in a scalar condition atom.
 ) where {T<:SD.AbstractCondition} =
     get_features.(atoms)
 
+"""
+    atoms_for_feature(atoms::Vector{SL.Atom{T}}, feat::Symbol)
+        -> Vector{SL.Atom{T}}
+
+Filter `atoms` to those whose feature name matches `feat`.
+
+See also: [`get_features`](@ref), [`extract_thresholds`](@ref)
+"""
 @inline atoms_for_feature(
     atoms::Vector{SL.Atom{T}},
     feat::Symbol

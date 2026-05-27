@@ -85,6 +85,7 @@ struct ExtractRulesData{
         # -------------------------------------------------------------------- #
         depth = get_depth(extractor)
         normalize = get_normalize_atoms(extractor)
+        type = get_float_type(extractor)
 
         # -------------------------------------------------------------------- #
         # STEP 2 — Extract the atoms (scalar conditions) from the model,
@@ -139,32 +140,21 @@ struct ExtractRulesData{
 
         # -------------------------------------------------------------------- #
         # STEP 4 — Derive the names of the features present in the
-        #          extracted atoms.
+        #          extracted atoms and retrieve the canonical feature 
+        #          name list and class labels from the model.
         #
-        # - get_feature.(atoms)  → feature object for each atom.
-        # - unique!              → removes duplicate feature objects in-place.
-        # - SM.featurename.      → converts each feature object to its 
-        #                          symbolic name.
-        #
-        # `features` therefore contains the names of only the features actually
-        # referenced by the atoms (a subset of the model's full feature set).
-        # -------------------------------------------------------------------- #
-        features = SM.featurename.(unique!(get_feature.(atoms)))
-        # TODO: if we dont have featurename ?
-
-        # -------------------------------------------------------------------- #
-        # STEP 5 — Retrieve the canonical feature name list and class labels
-        # from the model.
-        #
+        # - features: therefore contains the names of only the features 
+        #   actually referenced by the atoms.
         # - featurenames: the model's canonical feature ordering (may include
         #   features absent from the extracted atoms, e.g. when depth < 1.0).
         # - classnames: unique class labels present in the model's leaves.
         # -------------------------------------------------------------------- #
+        features = get_features(atoms)
         featurenames = SM.info(model, :featurenames)
         classnames = unique!(SM.info(model, :supporting_labels))
 
         # -------------------------------------------------------------------- #
-        # STEP 6 — Build, for each feature in `featurenames`, its sorted
+        # STEP 5 — Build, for each feature in `featurenames`, its sorted
         # threshold vector and determine its operator family.
         #
         # For each feature i:
@@ -184,9 +174,25 @@ struct ExtractRulesData{
         #             encoding, where larger thresholds correspond to
         #             later bits).
         # -------------------------------------------------------------------- #
-        type = get_float_type(extractor)
+        thresholds, op_families = extract_thresholds(
+            atoms,
+            features,
+            featurenames,
+            type;
+            boundary=false
+        )
+
         thresholds = Vector{Vector{type}}(undef, length(featurenames))
         op_families = Vector{Symbol}(undef, length(featurenames))
+
+        thresholds_boundary, _ = extract_thresholds(
+            atoms,
+            features,
+            featurenames,
+            type;
+            boundary=true
+        )
+        combinations = extract_combinations(thresholds_boundary)
 
         @inbounds for i in eachindex(featurenames)
             idx = findfirst(f -> f == featurenames[i], features)
@@ -204,7 +210,7 @@ struct ExtractRulesData{
         end
 
         # -------------------------------------------------------------------- #
-        # STEP 7 — Augment each threshold vector with the correct
+        # STEP 6 — Augment each threshold vector with the correct
         #          boundary point.
         #
         # For each feature, one extra sampling point is appended to cover the
@@ -227,7 +233,7 @@ struct ExtractRulesData{
         thrs_with_p = _thrs_with_boundary(thresholds, op_families)
 
         # -------------------------------------------------------------------- #
-        # STEP 8 — Generate the Cartesian product of all augmented threshold
+        # STEP 7 — Generate the Cartesian product of all augmented threshold
         # vectors.
         #
         # Iterators.product(thrs_with_p...) produces every possible combination
@@ -241,7 +247,7 @@ struct ExtractRulesData{
         combinations = Iterators.product(thrs_with_p...)
 
         # -------------------------------------------------------------------- #
-        # STEP 9 — Apply the model to all generated combinations.
+        # STEP 8 — Apply the model to all generated combinations.
         #
         # - The combinations are packed into a DataFrame with the canonical
         #   feature names and converted into a scalar logiset (scalarlogiset),
@@ -260,7 +266,7 @@ struct ExtractRulesData{
         )
 
         # -------------------------------------------------------------------- #
-        # STEP 10 — Construct and return the instance with all computed data.
+        # STEP 9 — Construct and return the instance with all computed data.
         #
         # Note: `featurenames` (canonical model ordering) is used instead of
         # `features` (atom-extraction ordering) to guarantee alignment with
