@@ -55,7 +55,10 @@ end
 # ---------------------------------------------------------------------------- #
 collect_atoms!(atoms::Vector{<:SL.Atom}, f::SL.Atom) = push!(atoms, f)
 
-collect_atoms!(atoms::Vector{T}, f::SL.Atom) where {T<:SL.Atom{<:SD.AbstractCondition}} = push!(atoms, f)
+collect_atoms!(
+    atoms::Vector{T},
+    f::SL.Atom
+) where {T<:SL.Atom{<:SD.AbstractCondition}} = push!(atoms, f)
 
 function collect_atoms!(
     atoms::Vector{T},

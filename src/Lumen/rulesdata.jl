@@ -89,10 +89,10 @@ struct ExtractRulesData{
         #   depth < 1.0 → partial extraction by depth
         #       - Iterates over every tree in the model (SM.models).
         #       - For each tree, visits nodes in BFS order
-        #         (_extract_atoms_bfs_order),
+        #         (extract_atoms_bfs_order),
         #         yielding atoms ordered from root to leaves.
         #       - Retains only the first `depth`% of BFS atoms for that tree
-        #         (_take_first_percentage),
+        #         (take_first_percentage),
         #         simulating a cut at a relative depth.
         #       - Concatenates all atoms collected across trees
         #         (mapreduce + vcat).
@@ -112,8 +112,8 @@ struct ExtractRulesData{
             mapreduce(
                 vcat, SM.models(model); init=SL.Atom{SD.AbstractCondition}[]
             ) do t
-                all_atoms_bfs = _extract_atoms_bfs_order(t)
-                _take_first_percentage(all_atoms_bfs, depth)
+                all_atoms_bfs = extract_atoms_bfs_order(t)
+                take_first_percentage(all_atoms_bfs, depth)
             end
         else
             SL.atoms(SM.alphabet(model, false))
