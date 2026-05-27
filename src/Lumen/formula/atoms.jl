@@ -83,38 +83,38 @@ end
 # ---------------------------------------------------------------------------- #
 #                               collect atoms                                  #
 # ---------------------------------------------------------------------------- #
-collect_atoms!(atoms::Vector{<:SL.Atom}, f::SL.Atom) = push!(atoms, f)
+# collect_atoms!(atoms::Vector{<:SL.Atom}, f::SL.Atom) = push!(atoms, f)
 
-collect_atoms!(
-    atoms::Vector{T},
-    f::SL.Atom
-) where {T<:SL.Atom{<:SD.AbstractCondition}} = push!(atoms, f)
+# collect_atoms!(
+#     atoms::Vector{T},
+#     f::SL.Atom
+# ) where {T<:SL.Atom{<:SD.AbstractCondition}} = push!(atoms, f)
 
-function collect_atoms!(
-    atoms::Vector{T},
-    f::SL.SyntaxStructure
-) where {T<:SL.Atom{<:SD.AbstractCondition}}
-    for child in SL.children(f)
-        collect_atoms!(atoms, child)
-    end
-    return atoms
-end
+# function collect_atoms!(
+#     atoms::Vector{T},
+#     f::SL.SyntaxStructure
+# ) where {T<:SL.Atom{<:SD.AbstractCondition}}
+#     for child in SL.children(f)
+#         collect_atoms!(atoms, child)
+#     end
+#     return atoms
+# end
 
-function collect_atoms(
-    f::SL.SyntaxStructure
-)
-    atoms = Vector{SL.Atom{<:SD.AbstractCondition}}()
-    collect_atoms!(atoms, f)
-    return unique!(atoms)
-end
+# function collect_atoms(
+#     f::SL.SyntaxStructure
+# )
+#     atoms = Vector{SL.Atom{<:SD.AbstractCondition}}()
+#     collect_atoms!(atoms, f)
+#     return unique!(atoms)
+# end
 
-function collect_atoms(f::SM.Rule)
-    collect_atoms(SM.antecedent(f))
-end
+# function collect_atoms(f::SM.Rule)
+#     collect_atoms(SM.antecedent(f))
+# end
 
-function collect_atoms(rules::Vector{<:SM.Rule})
-    unique!(reduce(vcat, collect_atoms.(rules)))
-end
+# function collect_atoms(rules::Vector{<:SM.Rule})
+#     unique!(reduce(vcat, collect_atoms.(rules)))
+# end
 
 # ---------------------------------------------------------------------------- #
 #                            atom normalization                                #
