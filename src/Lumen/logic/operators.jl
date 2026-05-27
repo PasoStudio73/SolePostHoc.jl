@@ -118,16 +118,9 @@ function validate_operators(
 
     @inbounds for i in eachindex(featurenames)
         idx = findfirst(f -> f == featurenames[i], features)
-        if isnothing(idx)
-            op_families[i] = :lt # default (irrelevant: no thresholds)
-        else
-            family = feature_op_family(atoms, features[idx])
-            op_families[i] = family
-            # thresholds[i] = sort!(
-            #     get_threshold.(_atoms_for_feature(atoms, features[idx]));
-            #     rev=(family === :lt) # descending for :lt, ascending for :gt
-            # )
-        end
+        op_families[i] = isnothing(idx) ?
+            :lt : # default (irrelevant: no thresholds)
+            feature_op_family(atoms, features[idx])
     end
 
     return op_families

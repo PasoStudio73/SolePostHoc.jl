@@ -35,19 +35,22 @@ function extract_thresholds(
     atoms::Vector{Atom{T}},
     features::Vector{Symbol},
     featurenames::Vector{Symbol},
+    op_families::Vector{Symbol},
     ::Type{S}=Float32;
-    prev::Bool=false
+    boundary::Bool=false
 )::Vector{Vector{S}} where {T,S}
     thresholds = Vector{Vector{S}}(undef, length(featurenames))
 
     @inbounds for i in eachindex(featurenames)
         idx = findfirst(f -> f == featurenames[i], features)
+        rev = isempty(op_families) ? true : (op_families[i] === :lt)
+
         thresholds[i] = isnothing(idx) ? 
             S[] :
             sort!(get_threshold.(
-                atoms_for_feature(atoms, features[idx])), rev=true
+                atoms_for_feature(atoms, features[idx])); rev
             )
-        prev && !isempty(thresholds[i]) &&
+        boundary && !isempty(thresholds[i]) &&
             append!(thresholds[i], prevfloat(last(thresholds[i])))
     end
 
@@ -84,6 +87,7 @@ function extract_thresholds(
     atoms::Vector{Vector{Atom{T}}},
     features::Vector{Vector{Symbol}},
     featurenames::Vector{Symbol},
+    op_families::Vector{Symbol},
     ::Type{S}=Float32;
     kwargs...
 )::Vector{Vector{Vector{S}}} where {T,S}
@@ -92,7 +96,7 @@ function extract_thresholds(
         "(got $(length(atoms)) and $(length(features)))"
 
     map((a, f) -> extract_thresholds(
-        a, f, featurenames, S; kwargs...),
+        a, f, featurenames, op_families, S; kwargs...),
         atoms, features
     )
 end

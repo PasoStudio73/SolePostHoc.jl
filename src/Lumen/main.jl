@@ -152,10 +152,28 @@ function lumen(
 
     atoms = extract_atoms(model; normalize)
     features = get_features(atoms)
-    
+
     op_families = normalize ?
         validate_operators(atoms, featurenames, features) :
         Symbol[]
+
+    thresholds = extract_thresholds(
+        atoms,
+        features,
+        featurenames,
+        op_families,
+        type;
+        boundary=false
+    )
+    combinations = extract_combinations(
+        extract_thresholds(
+            atoms,
+            features,
+            featurenames,
+            op_families,
+            type;
+            boundary=true)
+    )
 
 
 
