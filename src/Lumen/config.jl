@@ -31,15 +31,11 @@ validation and resolves the correct minimizer binary before storing anything.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `minimization_scheme` | `Symbol` | `:abc` | DNF minimization algorithm to use. |
+| `max_combs` | `Int` | `-1` | Maximum number of combinations to evaluate. Since combinations grow factorially, this cap prevents memory exhaustion. `-1` means no limit (all combinations are taken). |
 | `depth` | `Float64` | `1.0` | Fraction of each tree's BFS-ordered atoms to include ∈ (0, 1]. `1.0` uses the full alphabet. |
-| `vertical` | `Float64` | `1.0` | Instance-coverage parameter α ∈ (0, 1]. |
-| `horizontal` | `Float64` | `1.0` | Feature-coverage parameter β ∈ (0, 1]. |
-| `minimization_kwargs` | `NamedTuple` | `(;)` | Extra keyword arguments forwarded verbatim to the chosen minimizer. |
-| `filt_alphabet` | `Base.Callable` | `identity` | Optional callback applied to the logical alphabet before rule extraction. |
 | `apply_function` | `Base.Callable` | `SM.apply` | Function used to evaluate the model on generated input combinations. |
-| `importance` | `Vector` | `Float64[]` | Feature-importance weights; influences rule construction when non-empty. |
-| `check_opt` | `Bool` | `false` | When `true`, validates the OTT optimisation against the standard algorithm. |
-| `check_alphabet` | `Bool` | `false` | When `true`, runs alphabet-analysis diagnostics instead of full extraction. |
+| `float_type` | `Type` | `Float64` | Floating-point type used in internal computations. |
+| `rng` | `AbstractRNG` | `TaskLocalRNG()` | Random number generator used for stochastic steps. |
 
 # Supported minimization schemes
 
@@ -53,8 +49,15 @@ validation and resolves the correct minimizer binary before storing anything.
 # Validation
 
 The constructor throws `ArgumentError` when:
-- Any of `vertical`, `depth`, or `horizontal` is outside (0.0, 1.0].
 - `minimization_scheme` is not one of the supported symbols listed above.
+
+# Notes on `max_combs`
+
+Combination enumeration is factorial in the number of features/atoms.
+Setting `max_combs` to a finite positive integer caps the search space and
+avoids out-of-memory errors on large problems. When set to `-1` (default),
+the algorithm explores all combinations, which may be infeasible for large
+inputs.
 
 # Examples
 
@@ -62,19 +65,18 @@ The constructor throws `ArgumentError` when:
 # Default configuration
 cfg = LumenConfig()
 
-# Custom scheme and coverage parameters
+# Custom scheme with a combination cap to avoid memory issues
 cfg = LumenConfig(
     minimization_scheme = :mitespresso,
+    max_combs           = 10_000,
     depth               = 0.7,
-    vertical            = 0.9,
-    horizontal          = 0.8,
 )
 
-# Pass extra kwargs to the minimizer and use a custom alphabet filter
+# Pass extra kwargs to the minimizer and use a custom float type
 cfg = LumenConfig(
-    minimization_scheme  = :abc,
-    minimization_kwargs  = (timeout = 30,),
-    filt_alphabet        = alph -> my_filter(alph),
+    minimization_scheme = :abc,
+    float_type          = Float32,
+    rng                 = MersenneTwister(42),
 )
 ```
 
@@ -82,44 +84,20 @@ See also: [`lumen`](@ref), [`LumenResult`](@ref), [`AbstractConfig`](@ref)
 """
 struct LumenConfig <: AbstractConfig
     minimization_scheme::Symbol
+    max_combs::Int
     depth::Float64
-    vertical::Float64
-    horizontal::Float64
-    minimization_kwargs::NamedTuple
-    filt_alphabet::Base.Callable
     apply_function::Base.Callable
-    importance::Vector
-    check_opt::Bool
-    check_alphabet::Bool
     float_type::Type
+    rng::Random.AbstractRNG
 
     function LumenConfig(;
         minimization_scheme::Symbol=:abc,
+        max_combs::Int=-1,
         depth::Float64=1.0,
-        vertical::Float64=1.0,
-        horizontal::Float64=1.0,
-        minimization_kwargs::NamedTuple=(;),
-        filt_alphabet::Base.Callable=identity,
         apply_function::Base.Callable=SM.apply,
-        importance::Vector=Float64[],
-        check_opt::Bool=false,
-        check_alphabet::Bool=false,
-        float_type::Type=Float64
+        float_type::Type=Float64,
+        rng::Random.AbstractRNG=Random.TaskLocalRNG()
     )
-        # validate coverage parameters - must be positive and ≤ 1.0
-        # these parameters control the proportion of instances
-        # that must be covered by rules
-        if vertical ≤ 0.0 || vertical > 1.0 ||
-           horizontal ≤ 0.0 || horizontal > 1.0 ||
-           depth ≤ 0.0 || depth > 1.0
-            throw(ArgumentError(
-                "vertical, depth and horizontal parameters must be in range " *
-                "(0.0, 1.0]. Got vertical=$(vertical), depth=$(depth), " *
-                "horizontal=$(horizontal). These parameters control " *
-                "rule coverage and must be meaningful proportions.",
-            ),)
-        end
-
         # validate minimization scheme
         valid_schemes = [:mitespresso, :boom, :abc, :quine]
 
@@ -132,16 +110,11 @@ struct LumenConfig <: AbstractConfig
 
         new(
             minimization_scheme,
+            max_combs,
             depth,
-            vertical,
-            horizontal,
-            minimization_kwargs,
-            filt_alphabet,
             apply_function,
-            importance,
-            check_opt,
-            check_alphabet,
-            float_type
+            float_type,
+            rng
         )
     end
 end
@@ -152,76 +125,45 @@ end
 """
     get_minimization_scheme(r::LumenConfig) -> Symbol
 
-Return the DNF minimization algorithm identifier stored in `r`.
+Return the DNF minimization algorithm identifier.
 """
 @inline get_minimization_scheme(r::LumenConfig) = r.minimization_scheme
 
 """
+    get_max_combs(r::LumenConfig) -> Int
+
+Return the maximum number of combinations cap.
+
+A value of `-1` means no limit: the algorithm will explore all combinations.
+Since combination counts grow factorially, setting a finite cap is recommended
+for large problems to avoid memory exhaustion.
+"""
+@inline get_max_combs(r::LumenConfig) = r.max_combs
+
+"""
     get_depth(r::LumenConfig) -> Float64
 
-Return the depth coverage parameter δ ∈ (0, 1] stored in `r`.
+Return the depth coverage parameter δ ∈ (0, 1].
 """
 @inline get_depth(r::LumenConfig) = r.depth
 
 """
-    get_vertical(r::LumenConfig) -> Float64
-
-Return the instance-coverage parameter α ∈ (0, 1] stored in `r`.
-"""
-@inline get_vertical(r::LumenConfig) = r.vertical
-
-"""
-    get_horizontal(r::LumenConfig) -> Float64
-
-Return the feature-coverage parameter β ∈ (0, 1] stored in `r`.
-"""
-@inline get_horizontal(r::LumenConfig) = r.horizontal
-
-"""
-    get_minimization_kwargs(r::LumenConfig) -> NamedTuple
-
-Return the extra keyword arguments forwarded to the minimizer stored in `r`.
-"""
-@inline get_minimization_kwargs(r::LumenConfig) = r.minimization_kwargs
-
-"""
-    get_filt_alphabet(r::LumenConfig) -> Base.Callable
-
-Return the alphabet-filter callback stored in `r`.
-"""
-@inline get_filt_alphabet(r::LumenConfig) = r.filt_alphabet
-
-"""
     get_apply_function(r::LumenConfig) -> Base.Callable
 
-Return the model-application function stored in `r`.
+Return the model-application function.
 """
 @inline get_apply_function(r::LumenConfig) = r.apply_function
 
 """
-    get_importance(r::LumenConfig) -> Vector
-
-Return the feature-importance weight vector stored in `r`.
-"""
-@inline get_importance(r::LumenConfig) = r.importance
-
-"""
-    get_check_opt(r::LumenConfig) -> Bool
-
-Return `true` if OTT-optimisation validation is enabled in `r`.
-"""
-@inline get_check_opt(r::LumenConfig) = r.check_opt
-
-"""
-    get_check_alphabet(r::LumenConfig) -> Bool
-
-Return `true` if alphabet-analysis diagnostics are enabled in `r`.
-"""
-@inline get_check_alphabet(r::LumenConfig) = r.check_alphabet
-
-"""
     get_float_type(r::LumenConfig) -> Type
 
-Return the floating-point type stored in `r`.
+Return the floating-point type.
 """
 @inline get_float_type(r::LumenConfig) = r.float_type
+
+"""
+    get_rng(r::LumenConfig) -> AbstractRNG
+
+Return the random number generator.
+"""
+@inline get_rng(r::LumenConfig) = r.rng

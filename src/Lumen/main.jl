@@ -7,6 +7,7 @@ const SM = SoleModels
 using SoleData
 const SD = SoleData
 
+using Random
 using CategoricalArrays
 using DataFrames
 using IterTools
