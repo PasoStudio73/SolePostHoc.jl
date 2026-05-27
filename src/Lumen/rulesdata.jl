@@ -26,8 +26,8 @@ minimize per-class DNF formulas.
 # Low-level constructor: supply all fields directly.
 ExtractRulesData(grp_truths, thresholds, features, classnames, op_families)
 
-# High-level constructor: derive everything from a LumenConfig and a model.
-ExtractRulesData(extractor::LumenConfig, model::SM.AbstractModel)
+# High-level constructor: derive everything from a LumenRuleExtractor and a model.
+ExtractRulesData(extractor::LumenRuleExtractor, model::SM.AbstractModel)
 ```
 
 The high-level constructor:
@@ -39,7 +39,7 @@ The high-level constructor:
 5. Applies the model to those combinations to obtain class labels.
 6. Groups truth assignments by predicted class.
 
-See also: [`lumen`](@ref), [`LumenConfig`](@ref), [`get_atoms`](@ref)
+See also: [`lumen`](@ref), [`LumenRuleExtractor`](@ref), [`get_atoms`](@ref)
 """
 struct ExtractRulesData{
     P,
@@ -77,7 +77,7 @@ struct ExtractRulesData{
         op_families
     )
 
-    function ExtractRulesData(extractor::LumenConfig, model::SM.AbstractModel)
+    function ExtractRulesData(extractor::LumenRuleExtractor, model::SM.AbstractModel)
         # -------------------------------------------------------------------- #
         # STEP 1 — Read the depth parameter from the configuration.
         # `depth ∈ (0, 1]`: if < 1.0, only atoms from the upper levels of the

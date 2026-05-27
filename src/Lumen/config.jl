@@ -1,24 +1,8 @@
 # ---------------------------------------------------------------------------- #
-#                                    types                                     #
-# ---------------------------------------------------------------------------- #
-"""
-    AbstractConfig
-
-Abstract base type for all LUMEN configuration structs.
-
-Concrete subtypes encapsulate the parameters needed to control a specific
-algorithm variant. Using a common supertype allows generic code to accept
-any configuration object without being tied to a particular implementation.
-
-See also: [`LumenConfig`](@ref)
-"""
-abstract type AbstractConfig end
-
-# ---------------------------------------------------------------------------- #
 #                                 Lumen struct                                 #
 # ---------------------------------------------------------------------------- #
 """
-    LumenConfig <: AbstractConfig
+    LumenRuleExtractor <: AbstractConfig
 
 Configuration object for the LUMEN rule-extraction algorithm.
 
@@ -64,17 +48,17 @@ inputs.
 
 ```julia
 # Default configuration
-cfg = LumenConfig()
+cfg = LumenRuleExtractor()
 
 # Custom scheme with a combination cap to avoid memory issues
-cfg = LumenConfig(
+cfg = LumenRuleExtractor(
     minimization_scheme = :mitespresso,
     max_combs           = 10_000,
     depth               = 0.7,
 )
 
 # Pass extra kwargs to the minimizer and use a custom float type
-cfg = LumenConfig(
+cfg = LumenRuleExtractor(
     minimization_scheme = :abc,
     float_type          = Float32,
     rng                 = MersenneTwister(42),
@@ -83,7 +67,7 @@ cfg = LumenConfig(
 
 See also: [`lumen`](@ref), [`LumenResult`](@ref), [`AbstractConfig`](@ref)
 """
-struct LumenConfig <: AbstractConfig
+struct LumenRuleExtractor <: SM.RuleExtractor
     minimization_scheme::Symbol
     max_combs::Int
     depth::Float64
@@ -92,7 +76,7 @@ struct LumenConfig <: AbstractConfig
     float_type::Type
     rng::Random.AbstractRNG
 
-    function LumenConfig(;
+    function LumenRuleExtractor(;
         minimization_scheme::Symbol=:abc,
         max_combs::Int=-1,
         depth::Float64=1.0,
@@ -127,14 +111,14 @@ end
 #                                  methods                                     #
 # ---------------------------------------------------------------------------- #
 """
-    get_minimization_scheme(r::LumenConfig) -> Symbol
+    get_minimization_scheme(r::LumenRuleExtractor) -> Symbol
 
 Return the DNF minimization algorithm identifier.
 """
-@inline get_minimization_scheme(r::LumenConfig) = r.minimization_scheme
+@inline get_minimization_scheme(r::LumenRuleExtractor) = r.minimization_scheme
 
 """
-    get_max_combs(r::LumenConfig) -> Int
+    get_max_combs(r::LumenRuleExtractor) -> Int
 
 Return the maximum number of combinations cap.
 
@@ -142,24 +126,24 @@ A value of `-1` means no limit: the algorithm will explore all combinations.
 Since combination counts grow factorially, setting a finite cap is recommended
 for large problems to avoid memory exhaustion.
 """
-@inline get_max_combs(r::LumenConfig) = r.max_combs
+@inline get_max_combs(r::LumenRuleExtractor) = r.max_combs
 
 """
-    get_depth(r::LumenConfig) -> Float64
+    get_depth(r::LumenRuleExtractor) -> Float64
 
 Return the depth coverage parameter δ ∈ (0, 1].
 """
-@inline get_depth(r::LumenConfig) = r.depth
+@inline get_depth(r::LumenRuleExtractor) = r.depth
 
 """
-    get_apply_function(r::LumenConfig) -> Base.Callable
+    get_apply_function(r::LumenRuleExtractor) -> Base.Callable
 
 Return the model-application function.
 """
-@inline get_apply_function(r::LumenConfig) = r.apply_function
+@inline get_apply_function(r::LumenRuleExtractor) = r.apply_function
 
 """
-    get_normalize_atoms(r::LumenConfig) -> Bool
+    get_normalize_atoms(r::LumenRuleExtractor) -> Bool
 
 Return whether atom normalization is enabled.
 
@@ -169,18 +153,18 @@ rules use both operator directions on the same feature.
 
 See also: [`normalize_atom`](@ref)
 """
-@inline get_normalize_atoms(r::LumenConfig) = r.normalize_atoms
+@inline get_normalize_atoms(r::LumenRuleExtractor) = r.normalize_atoms
 
 """
-    get_float_type(r::LumenConfig) -> Type
+    get_float_type(r::LumenRuleExtractor) -> Type
 
 Return the floating-point type.
 """
-@inline get_float_type(r::LumenConfig) = r.float_type
+@inline get_float_type(r::LumenRuleExtractor) = r.float_type
 
 """
-    get_rng(r::LumenConfig) -> AbstractRNG
+    get_rng(r::LumenRuleExtractor) -> AbstractRNG
 
 Return the random number generator.
 """
-@inline get_rng(r::LumenConfig) = r.rng
+@inline get_rng(r::LumenRuleExtractor) = r.rng

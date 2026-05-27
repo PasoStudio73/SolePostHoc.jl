@@ -128,7 +128,7 @@ end
 """
     run_minimization(
         ::Val{:abc},
-        extractor::LumenConfig,
+        extractor::LumenRuleExtractor,
         atoms::Vector{Vector{SL.Atom}}
     ) -> Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure}}
 
@@ -138,7 +138,7 @@ Delegates to `abc_minimize` with the binary path from `extractor`, then
 applies [`_refine_dnf`](@ref) to remove dominated terms.
 
 # Arguments
-- `extractor::LumenConfig`: Provides the ABC binary path and depth parameter.
+- `extractor::LumenRuleExtractor`: Provides the ABC binary path and depth parameter.
 - `atoms::Vector{Vector{SL.Atom}}`: Per-combination atom lists (one entry per
   input combination assigned to the target class).
 
@@ -147,7 +147,7 @@ applies [`_refine_dnf`](@ref) to remove dominated terms.
 """
 function run_minimization(
     ::Val{:abc},
-    extractor::LumenConfig,
+    extractor::LumenRuleExtractor,
     atoms::Vector{Vector{SL.Atom}}
 )
     ABC_jll.abc() do binary
@@ -165,7 +165,7 @@ end
 """
     run_minimization(
         ::Val{:mitespresso},
-        extractor::LumenConfig,
+        extractor::LumenRuleExtractor,
         atoms::Vector{Vector{SL.Atom}}
     ) -> Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure}}
 
@@ -175,7 +175,7 @@ Delegates to `SD.espresso_minimize` with the binary path from `extractor`, then
 applies [`_refine_dnf`](@ref) to remove dominated terms.
 
 # Arguments
-- `extractor::LumenConfig`: Provides the Espresso binary path and
+- `extractor::LumenRuleExtractor`: Provides the Espresso binary path and
   depth parameter.
 - `atoms::Vector{Vector{SL.Atom}}`: Per-combination atom lists.
 
@@ -184,7 +184,7 @@ applies [`_refine_dnf`](@ref) to remove dominated terms.
 """
 function run_minimization(
     ::Val{:mitespresso},
-    extractor::LumenConfig,
+    extractor::LumenRuleExtractor,
     atoms::Vector{Vector{SL.Atom}}
     # TODO mitespresso_kwargs...
 )

@@ -1,10 +1,10 @@
 module Lumen
 
 using SoleLogics
-const SL = SoleLogics
 using SoleModels
-const SM = SoleModels
 using SoleData
+const SL = SoleLogics
+const SM = SoleModels
 const SD = SoleData
 
 using Random
@@ -17,19 +17,22 @@ using ABC_jll
 const Operators = Union{typeof(<),typeof(>),typeof(≤),typeof(≥)}
 const Float = Union{Float32,Float64}
 
+include("lazyproduct.jl")
 include("config.jl")
 include("rulesdata.jl")
 
 include("logic/operators.jl")
 include("logic/atoms.jl")
 include("logic/thresholds.jl")
+include("logic/predictions.jl")
+include("logic/apply.jl")
 
 include("minimization/depth.jl")
 include("minimization/pla.jl")
 include("minimization/minimizations.jl")
 include("minimization/combinations.jl")
 
-export lumen, LumenConfig, LumenResult
+export lumen, LumenRuleExtractor, LumenResult
 
 # ---------------------------------------------------------------------------- #
 #                                 LumenResult                                  #
@@ -57,7 +60,7 @@ rules  = result.decision_set
 meta   = result.info            # NamedTuple – may be empty
 ```
 
-See also: [`lumen`](@ref), [`LumenConfig`](@ref)
+See also: [`lumen`](@ref), [`LumenRuleExtractor`](@ref)
 """
 struct LumenResult
     decision_set::DecisionSet
@@ -78,7 +81,7 @@ Base.length(lr::LumenResult) = length(lr.decision_set)
 #                                    lumen                                     #
 # ---------------------------------------------------------------------------- #
 """
-    lumen(config::LumenConfig, model::SM.AbstractModel) -> SM.DecisionSet
+    lumen(config::LumenRuleExtractor, model::SM.AbstractModel) -> SM.DecisionSet
 
 Core single-model entry point for the LUMEN algorithm.
 
@@ -94,7 +97,7 @@ encoded in `config`.
 4. Wrap the minimized formulas in `SM.Rule` objects and return a `DecisionSet`.
 
 # Arguments
-- `config::LumenConfig`: Algorithm configuration
+- `config::LumenRuleExtractor`: Algorithm configuration
   (minimization scheme, depth, etc.).
 - `model::SM.AbstractModel`: A single decision-tree model.
 
@@ -103,7 +106,7 @@ encoded in `config`.
 
 ---
 
-    lumen(config::LumenConfig, model::Vector{SM.AbstractModel}) -> LumenResult
+    lumen(config::LumenRuleExtractor, model::Vector{SM.AbstractModel}) -> LumenResult
 
 Batch variant: applies `lumen(config, m)` to every model in the vector and
 collects the results into a [`LumenResult`](@ref).
@@ -112,14 +115,14 @@ collects the results into a [`LumenResult`](@ref).
 
     lumen(model::SM.AbstractModel, args...; kwargs...) -> SM.DecisionSet
 
-Convenience wrapper: constructs a `LumenConfig` from keyword arguments and
+Convenience wrapper: constructs a `LumenRuleExtractor` from keyword arguments and
 delegates to `lumen(config, model)`.
 
 ---
 
     lumen(model::Vector{SM.AbstractModel}, args...; kwargs...) -> LumenResult
 
-Convenience wrapper for vector of models: constructs `LumenConfig` from keyword
+Convenience wrapper for vector of models: constructs `LumenRuleExtractor` from keyword
 arguments and maps over the vector.
 
 # Examples
@@ -131,25 +134,29 @@ ds = lumen(my_tree)
 ds = lumen(my_tree; minimization_scheme=:mitespresso, depth=0.8)
 
 # Explicit config object
-config = LumenConfig(minimization_scheme=:abc, depth=0.7)
+config = LumenRuleExtractor(minimization_scheme=:abc, depth=0.7)
 ds = lumen(config, my_tree)
 
 # Batch processing
 results = lumen(config, [tree1, tree2, tree3])
 ```
 
-See also: [`LumenConfig`](@ref), [`LumenResult`](@ref),
+See also: [`LumenRuleExtractor`](@ref), [`LumenResult`](@ref),
 [`ExtractRulesData`](@ref)
 """
 function lumen(
-    config::LumenConfig,
+    config::LumenRuleExtractor,
     model::SM.AbstractModel
 )
     featurenames = SM.info(model, :featurenames)
     classnames = unique!(SM.info(model, :supporting_labels))
+    max_combs = get_max_combs(config)
+    rng = get_rng(config)
     normalize = get_normalize_atoms(config)
     type = get_float_type(config)
 
+    @show max_combs
+    @show rng
     atoms = extract_atoms(model; normalize)
     features = get_features(atoms)
 
@@ -174,6 +181,8 @@ function lumen(
             type;
             boundary=true)
     )
+
+    predictions = collect_predictions(model, combinations)
 
 
 
@@ -207,7 +216,7 @@ function lumen(
 end
 
 function lumen(
-    config::LumenConfig,
+    config::LumenRuleExtractor,
     model::Vector{SM.AbstractModel}
 )
     ds = map(model) do m
@@ -217,21 +226,13 @@ function lumen(
     return LumenResult(ds)
 end
 
-function lumen(
-    model::SM.AbstractModel,
-    args...;
-    kwargs...
-)
-    lumen(LumenConfig(; kwargs...), model)
+function lumen(model::SM.AbstractModel; kwargs...)
+    lumen(LumenRuleExtractor(; kwargs...), model)
 end
 
-function lumen(
-    model::Vector{SM.AbstractModel},
-    args...;
-    kwargs...
-)
+function lumen(model::Vector{SM.AbstractModel}; kwargs...)
     ds = map(model) do m
-        lumen(m, args...; kwargs...)
+        lumen(m; kwargs...)
     end
 
     return LumenResult(ds)
