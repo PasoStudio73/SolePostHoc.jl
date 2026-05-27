@@ -19,6 +19,9 @@ function extract_atoms(
         neg isa SM.Branch && push!(stack, neg)
     end
 
+    # xgboost sometimes returns atoms with < Inf that are useless
+    filter!(a -> a.value.threshold != Inf, atoms)
+
     normalize && (atoms = normalize_atom.(atoms))
     return out_unique ? unique!(atoms) : atoms
 end
