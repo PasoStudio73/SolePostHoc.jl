@@ -1,39 +1,28 @@
 function collect_predictions(
-    model::SM.Branch{S},
+    model::Union{SM.Branch{S},SM.DecisionEnsemble{S}},
     combinations::LazyProduct{T};
     max_combs::Int,
-    rng::Random.AbstractRNG
+    rng::Random.AbstractRNG=Random.TaskLocalRNG()
 ) where {S,T<:Float}
     possible_combs = length(combinations)
 
-    if max_combs > 0 && possible_combs > max_combs
-        predictions = Vector{S}(undef, length(max_combs))
-        Threads.@threads for i in eachindex(combinations)
-            predictions[i] = apply(model, combinations[i])
-        end
-
-        return predictions
+    sampled_idxs = if max_combs == -1
+        1:possible_combs
     else
-        predictions = Vector{S}(undef, length(combinations))
-        Threads.@threads for i in eachindex(combinations)
-            predictions[i] = apply(model, combinations[i])
-        end
-
-        return predictions
+        Random.randperm(rng, possible_combs)[1:max_combs]
     end
-end
 
-function collect_predictions(
-    model::SM.DecisionEnsemble{S},
-    combinations::LazyProduct{T};
-    max_combs::Int,
-    rng::Random.AbstractRNG
-) where {S,T<:Float}
-    O = typeof(apply(model, first(combinations)))
-    predictions = Vector{O}(undef, length(combinations))
+    ncombs = length(sampled_idxs)
 
-    Threads.@threads for i in eachindex(combinations)
-        predictions[i] = apply(model, combinations[i])
+    predictions = if model isa SM.DecisionEnsemble
+        O = typeof(apply(model, combinations[1]))
+        Vector{O}(undef, ncombs)
+    else
+        Vector{S}(undef, ncombs)
+    end
+@show ncombs
+    Threads.@threads for i in eachindex(sampled_idxs)
+        predictions[i] = apply(model, combinations[sampled_idxs[i]])
     end
 
     return predictions
