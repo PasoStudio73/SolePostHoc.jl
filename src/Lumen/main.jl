@@ -563,57 +563,6 @@ end
     )
 
 # ---------------------------------------------------------------------------- #
-#                           dnf minimization refine                            #
-# ---------------------------------------------------------------------------- #
-"""
-    _refine_dnf(terms::Vector{
-        <:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure
-    }}) -> Vector{...}
-
-Remove DNF terms that are strictly dominated by another term
-in the same formula.
-
-A term `t_i` is strictly dominated by `t_j` (i ≠ j) when the hyper-rectangle
-described by `t_j`'s bounds is entirely contained within that of `t_i`, making
-`t_i` logically redundant.
-
-The function:
-1. Extracts bounds for every term via `SD.extract_term_bounds`.
-2. Marks and removes dominated terms.
-3. Returns the original vector unchanged as a safety fallback if all terms would
-   be removed.
-
-# Arguments
-- `terms`: Non-empty vector of conjunctive terms forming a DNF formula.
-
-# Returns
-- Pruned vector of terms; never empty
-  (returns `terms` if pruning would empty it).
-
-# Notes
-Requires at least two terms to perform any pruning; single-term inputs are
-returned immediately.
-"""
-function _refine_dnf(
-    terms::Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom},SyntaxStructure}}
-)
-    length(terms) ≤ 1 && return terms
-
-    all_bounds = map(term -> SD.extract_term_bounds(term; silent=true), terms)
-
-    # find terms not strictly dominated by any other term
-    keep_mask = map(enumerate(all_bounds)) do (i, bounds_i)
-        !any(j -> i ≠ j && SD.strictly_dominates(
-                all_bounds[j], bounds_i), eachindex(all_bounds))
-    end
-
-    kept_terms = terms[keep_mask]
-
-    # safety check: never return empty formula
-    return isempty(kept_terms) ? terms : kept_terms
-end
-
-# ---------------------------------------------------------------------------- #
 #                                    lumen                                     #
 # ---------------------------------------------------------------------------- #
 """

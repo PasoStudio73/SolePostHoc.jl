@@ -2,9 +2,11 @@
 #                               extract atoms                                  #
 # ---------------------------------------------------------------------------- #
 function extract_atoms(
-    model::SM.Branch{T}
-) where T
-    atoms = typeof(SM.antecedent(model))[]
+    model::SM.Branch{T};
+    normalize::Bool=false,
+    out_unique::Bool=true
+)::Vector{SL.Atom{SD.ScalarCondition}} where {T<:SM.Label}
+    atoms = SL.Atom{SD.ScalarCondition}[]
     stack = SM.Branch{T}[model]
 
     while !isempty(stack)
@@ -17,10 +19,38 @@ function extract_atoms(
         neg isa SM.Branch && push!(stack, neg)
     end
 
-    return unique!(atoms)::Vector{typeof(SM.antecedent(model))}
+    normalize && (atoms = normalize_atom.(atoms))
+    return out_unique ? unique!(atoms) : atoms
 end
 
-extract_atoms(model::SM.DecisionTree{T}) where T = extract_atoms(SM.root(model))
+function extract_atoms(
+    model::SM.DecisionTree{T};
+    normalize::Bool=false,
+    out_unique::Bool=true
+)::Vector{SL.Atom{SD.ScalarCondition}} where {T<:SM.Label}
+    atoms = extract_atoms(SM.root(model), normalize=false, out_unique=false)
+
+    normalize && (atoms = normalize_atom.(atoms))
+    return out_unique ? unique!(atoms) : atoms
+end
+
+function extract_atoms(
+    model::SM.DecisionEnsemble{T};
+    normalize::Bool=false,
+    out_unique::Bool=true
+)::Vector{SL.Atom{SD.ScalarCondition}} where {T<:SM.Label}
+    models = SM.models(model)
+    atoms = Vector{Vector{SL.Atom{SD.ScalarCondition}}}(undef, length(models))
+
+    Threads.@threads for i in eachindex(models)
+        atoms[i] = extract_atoms(models[i]; normalize=false, out_unique=false)
+    end
+
+    atoms = reduce(vcat, atoms)
+
+    normalize && (atoms = normalize_atom.(atoms))
+    return out_unique ? unique!(atoms) : atoms
+end
 
 # ---------------------------------------------------------------------------- #
 #                                  get atoms                                   #
@@ -196,4 +226,3 @@ Return the integer variable index of the feature inside a scalar condition atom.
 """
 @inline get_i_variable(atom::SL.Atom{<:SD.AbstractCondition}) =
     atom.value.metacond.feature.i_variable
-

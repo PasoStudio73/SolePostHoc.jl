@@ -34,6 +34,7 @@ validation and resolves the correct minimizer binary before storing anything.
 | `max_combs` | `Int` | `-1` | Maximum number of combinations to evaluate. Since combinations grow factorially, this cap prevents memory exhaustion. `-1` means no limit (all combinations are taken). |
 | `depth` | `Float64` | `1.0` | Fraction of each tree's BFS-ordered atoms to include ∈ (0, 1]. `1.0` uses the full alphabet. |
 | `apply_function` | `Base.Callable` | `SM.apply` | Function used to evaluate the model on generated input combinations. |
+| `normalize_atoms` | `Bool` | `false` | Whether to rewrite `>` and `≤` operators into the canonical `<`/`≥` family via `normalize_atom`. Resolves mixed-family errors when rules use both operator directions on the same feature. |
 | `float_type` | `Type` | `Float64` | Floating-point type used in internal computations. |
 | `rng` | `AbstractRNG` | `TaskLocalRNG()` | Random number generator used for stochastic steps. |
 
@@ -87,6 +88,7 @@ struct LumenConfig <: AbstractConfig
     max_combs::Int
     depth::Float64
     apply_function::Base.Callable
+    normalize_atoms::Bool
     float_type::Type
     rng::Random.AbstractRNG
 
@@ -95,6 +97,7 @@ struct LumenConfig <: AbstractConfig
         max_combs::Int=-1,
         depth::Float64=1.0,
         apply_function::Base.Callable=SM.apply,
+        normalize_atoms::Bool=false,
         float_type::Type=Float64,
         rng::Random.AbstractRNG=Random.TaskLocalRNG()
     )
@@ -113,6 +116,7 @@ struct LumenConfig <: AbstractConfig
             max_combs,
             depth,
             apply_function,
+            normalize_atoms,
             float_type,
             rng
         )
@@ -153,6 +157,19 @@ Return the depth coverage parameter δ ∈ (0, 1].
 Return the model-application function.
 """
 @inline get_apply_function(r::LumenConfig) = r.apply_function
+
+"""
+    get_normalize_atoms(r::LumenConfig) -> Bool
+
+Return whether atom normalization is enabled.
+
+When `true`, atoms using `>` or `≤` are rewritten into the canonical `<`/`≥`
+family via `normalize_atom`. This resolves mixed-family errors that arise when
+rules use both operator directions on the same feature.
+
+See also: [`normalize_atom`](@ref)
+"""
+@inline get_normalize_atoms(r::LumenConfig) = r.normalize_atoms
 
 """
     get_float_type(r::LumenConfig) -> Type

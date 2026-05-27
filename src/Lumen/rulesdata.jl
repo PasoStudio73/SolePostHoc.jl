@@ -69,7 +69,12 @@ struct ExtractRulesData{
         F<:SM.Label,
         L<:SM.Label
     } = new{P,C,T,F,L}(
-        predictions, combinations, thresholds, featurenames, classnames, op_families
+        predictions,
+        combinations,
+        thresholds,
+        featurenames,
+        classnames,
+        op_families
     )
 
     function ExtractRulesData(extractor::LumenConfig, model::SM.AbstractModel)
@@ -79,6 +84,7 @@ struct ExtractRulesData{
         # tree are used (partial extraction); if == 1.0, all atoms are used.
         # -------------------------------------------------------------------- #
         depth = get_depth(extractor)
+        normalize = get_normalize_atoms(extractor)
 
         # -------------------------------------------------------------------- #
         # STEP 2 — Extract the atoms (scalar conditions) from the model,
@@ -108,16 +114,7 @@ struct ExtractRulesData{
         # encounters a mixed-family feature, which would otherwise arise when a
         # DecisionList mixes operator families across its rules.
         # -------------------------------------------------------------------- #
-        atoms = unique!(normalize_atom.(if depth < 1.0
-            mapreduce(
-                vcat, SM.models(model); init=SL.Atom{SD.AbstractCondition}[]
-            ) do t
-                all_atoms_bfs = extract_atoms_bfs_order(t)
-                take_first_percentage(all_atoms_bfs, depth)
-            end
-        else
-            SL.atoms(SM.alphabet(model, false))
-        end))
+        atoms = extract_atoms(model; normalize)
 
         # -------------------------------------------------------------------- #
         # STEP 3 — Validate that every operator present in the extracted atoms
@@ -127,7 +124,7 @@ struct ExtractRulesData{
         # as a safety-net for genuinely unsupported operators (e.g. `==`, `!=`)
         # that `normalize_atom` does not handle.
         # -------------------------------------------------------------------- #
-        let unsupported = unique(
+        normalize && let unsupported = unique(
                 op for op in get_operator.(atoms)
                 if op ∉ _supported_operators
             )
