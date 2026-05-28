@@ -55,10 +55,13 @@ function extract_thresholds(
         #                    prevfloat(last) because last is the smallest value
         # :gt (ascending)  → boundary point is ABOVE the maximum threshold
         #                    nextfloat(last) because last is the largest value
-        boundary && !isempty(op_families) && !isempty(thresholds[i]) && begin
-            op_families[i] === :lt ?
-                append!(thresholds[i], prevfloat(last(thresholds[i]))) :
-                append!(thresholds[i], nextfloat(last(thresholds[i])))
+        if boundary && !isempty(thresholds[i])
+            !isempty(op_families) ? begin
+                op_families[i] === :lt ?
+                    append!(thresholds[i], prevfloat(last(thresholds[i]))) :
+                    append!(thresholds[i], nextfloat(last(thresholds[i])))      
+            end :
+                append!(thresholds[i], prevfloat(last(thresholds[i])))
         end
     end
 
