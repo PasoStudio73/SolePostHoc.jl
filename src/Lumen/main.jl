@@ -129,14 +129,14 @@ arguments and maps over the vector.
 # Examples
 ```julia
 # Single model with default settings
-ds = lumen(my_tree)
+lumen(my_tree)
 
 # Single model with custom minimization scheme
-ds = lumen(my_tree; minimization_scheme=:mitespresso, depth=0.8)
+lumen(my_tree; minimization_scheme=:mitespresso, depth=0.8)
 
 # Explicit config object
 config = LumenRuleExtractor(minimization_scheme=:abc, depth=0.7)
-ds = lumen(config, my_tree)
+lumen(config, my_tree)
 
 # Batch processing
 results = lumen(config, [tree1, tree2, tree3])
@@ -164,24 +164,33 @@ function lumen(
         validate_operators(atoms, featurenames, features) :
         Symbol[]
 
+    # thresholds = extract_thresholds(
+    #     atoms,
+    #     features,
+    #     featurenames,
+    #     op_families,
+    #     type;
+    #     boundary=false
+    # )
+    # combinations = extract_combinations(
+    #     extract_thresholds(
+    #         atoms,
+    #         features,
+    #         featurenames,
+    #         op_families,
+    #         type;
+    #         boundary=true)
+    # )
+
     thresholds = extract_thresholds(
         atoms,
         features,
         featurenames,
         op_families,
         type;
-        boundary=false
+        boundary=true
     )
-    combinations = extract_combinations(
-        extract_thresholds(
-            atoms,
-            features,
-            featurenames,
-            op_families,
-            type;
-            boundary=true)
-    )
-
+    combinations = extract_combinations(thresholds)
     predictions = collect_predictions(model, combinations; max_combs, rng)
 
     formulas = collect_formulas(
@@ -189,7 +198,7 @@ function lumen(
         classnames,
         predictions,
         combinations,
-        thresholds,
+        [@view(v[1:end-1]) for v in thresholds],
         featurenames,
         nclasses,
         type
@@ -199,61 +208,30 @@ function lumen(
     formulas = formulas[valid_mask]
     classnames = classnames[valid_mask]
 
-    return SM.DecisionSet(
-        SM.Rule.(SL.LeftmostDisjunctiveForm.(formulas), classnames))
-
-
-
-    # extract conjuncts
-    # extractrulesdata = ExtractRulesData(config, model)
-    # classes = get_classnames(extractrulesdata)
-    # nclasses = length(classes)
-
-    # formulas =
-    #     Vector{Vector{Union{
-    #         SL.LeftmostConjunctiveForm{SL.Atom{float_type}},
-    #         SyntaxStructure
-    #     }}}(undef, nclasses)
-
-    # Threads.@threads for i in 1:nclasses
-    #     atoms = get_atoms(extractrulesdata, i; float_type)
-    #     formulas[i] = isempty(atoms) ?
-    #                   SL.Atom{SD.AbstractCondition}[] :
-    #                   run_minimization(
-    #         Val(get_minimization_scheme(config)), config, atoms
-    #     )
-    # end
-
-    # valid_mask = .!isempty.(formulas)
-    # formulas = formulas[valid_mask]
-    # classes = classes[valid_mask]
-
-    # return SM.DecisionSet(
-    #     SM.Rule.(SL.LeftmostDisjunctiveForm.(formulas), classes)
-    # )
+    rules = SM.Rule.(SL.LeftmostDisjunctiveForm.(formulas), classnames)
+    return SM.DecisionSet(rules)
 end
 
 function lumen(
     config::LumenRuleExtractor,
     model::Vector{SM.AbstractModel}
-)
-    ds = map(model) do m
+)::Vector{SM.DecisionSet}
+    map(model) do m
         lumen(config, m)
     end
-
-    return LumenResult(ds)
 end
 
-function lumen(model::SM.AbstractModel; kwargs...)
+function lumen(model::SM.AbstractModel; kwargs...)::SM.DecisionSet
     lumen(LumenRuleExtractor(; kwargs...), model)
 end
 
-function lumen(model::Vector{SM.AbstractModel}; kwargs...)
-    ds = map(model) do m
+function lumen(
+    model::Vector{SM.AbstractModel};
+    kwargs...
+)::Vector{SM.DecisionSet}
+    map(model) do m
         lumen(m; kwargs...)
     end
-
-    return LumenResult(ds)
 end
 
 end

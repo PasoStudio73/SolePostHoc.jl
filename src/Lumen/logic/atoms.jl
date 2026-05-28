@@ -96,7 +96,7 @@ function get_atoms(
     classnames::Vector{S},
     predictions::Vector{S},
     combinations::LazyProduct{T},
-    thresholds::Vector{Vector{T}},
+    thresholds::Vector{<:AbstractVector{T}},
     featurenames::Vector{Symbol},
     i::Int
 ) where {S<:SM.CLabel,T<:Float}
@@ -115,7 +115,7 @@ function get_atoms(
     truths::Vector{Vector{BitVector}},
     thresholds::Vector{T},
     featurenames::Vector{Symbol}
-) where {T<:Vector{<:Float}}
+) where {T<:AbstractVector{<:Float}}
     conjuncts = Vector{Vector{SL.Atom}}(undef, length(truths))
 
     Threads.@threads for i in eachindex(truths)

@@ -3,7 +3,7 @@ function collect_formulas(
     classnames::Vector{S},
     predictions::Vector{S},
     combinations::LazyProduct{T},
-    thresholds::Vector{Vector{T}},
+    thresholds::Vector{<:AbstractVector{T}},
     featurenames::Vector{Symbol},
     nclasses::Int,
     type::Type
