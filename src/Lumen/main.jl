@@ -24,7 +24,6 @@ include("logic/operators.jl")
 include("logic/atoms.jl")
 include("logic/thresholds.jl")
 include("logic/predictions.jl")
-include("logic/apply.jl")
 include("logic/disjuncts.jl")
 include("logic/truths.jl")
 
