@@ -50,8 +50,16 @@ function extract_thresholds(
             sort!(get_threshold.(
                 atoms_for_feature(atoms, features[idx])); rev
             )
-        boundary && !isempty(thresholds[i]) &&
-            append!(thresholds[i], prevfloat(last(thresholds[i])))
+
+        # :lt (descending) → boundary point is BELOW the minimum threshold
+        #                    prevfloat(last) because last is the smallest value
+        # :gt (ascending)  → boundary point is ABOVE the maximum threshold
+        #                    nextfloat(last) because last is the largest value
+        boundary && !isempty(op_families) && !isempty(thresholds[i]) && begin
+            op_families[i] === :lt ?
+                append!(thresholds[i], prevfloat(last(thresholds[i]))) :
+                append!(thresholds[i], nextfloat(last(thresholds[i])))
+        end
     end
 
     return thresholds
