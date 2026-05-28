@@ -98,6 +98,8 @@ function get_atoms(
     combinations::LazyProduct{T},
     thresholds::Vector{<:AbstractVector{T}},
     featurenames::Vector{Symbol},
+    op_families::Vector{Symbol},
+    normalize::Bool,
     i::Int
 ) where {S<:SM.CLabel,T<:Float}
     truths = truths_by_groups(
@@ -108,19 +110,26 @@ function get_atoms(
         i
     )
 
-    get_atoms(truths, thresholds, featurenames)
+    get_atoms(truths, thresholds, featurenames, op_families, normalize)
 end
 
 function get_atoms(
     truths::Vector{Vector{BitVector}},
     thresholds::Vector{T},
-    featurenames::Vector{Symbol}
+    featurenames::Vector{Symbol},
+    op_families::Vector{Symbol},
+    normalize::Bool,
 ) where {T<:AbstractVector{<:Float}}
     conjuncts = Vector{Vector{SL.Atom}}(undef, length(truths))
 
     Threads.@threads for i in eachindex(truths)
-        conjuncts[i] =
-            generate_disjunct(truths[i], thresholds, featurenames)
+        conjuncts[i] = generate_disjunct(
+            truths[i],
+            thresholds,
+            featurenames,
+            op_families,
+            normalize
+        )
     end
 
     return conjuncts

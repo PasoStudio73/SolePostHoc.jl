@@ -5,7 +5,9 @@ function collect_formulas(
     combinations::LazyProduct{T},
     thresholds::Vector{<:AbstractVector{T}},
     featurenames::Vector{Symbol},
+    op_families::Vector{Symbol},
     nclasses::Int,
+    normalize::Bool,
     type::Type
 ) where {S<:SM.CLabel,T<:Float}
     formulas = Vector{Vector{Union{
@@ -20,6 +22,8 @@ function collect_formulas(
             combinations,
             thresholds,
             featurenames,
+            op_families,
+            normalize,
             i
         )
         

@@ -103,7 +103,7 @@ function validate_operators(
 ) where {T<:SD.ScalarCondition}
     let unsupported = unique(
             op for op in get_operator.(atoms)
-            if op ∉ _supported_operators
+            if op ∉ supported_operators
         )
         isempty(unsupported) || throw(ArgumentError(
             "Only '<', '≥', '>', '≤' operators are currently supported. " *

@@ -164,24 +164,6 @@ function lumen(
         validate_operators(atoms, featurenames, features) :
         Symbol[]
 
-    # thresholds = extract_thresholds(
-    #     atoms,
-    #     features,
-    #     featurenames,
-    #     op_families,
-    #     type;
-    #     boundary=false
-    # )
-    # combinations = extract_combinations(
-    #     extract_thresholds(
-    #         atoms,
-    #         features,
-    #         featurenames,
-    #         op_families,
-    #         type;
-    #         boundary=true)
-    # )
-
     thresholds = extract_thresholds(
         atoms,
         features,
@@ -200,7 +182,9 @@ function lumen(
         combinations,
         [@view(v[1:end-1]) for v in thresholds],
         featurenames,
+        op_families,
         nclasses,
+        normalize,
         type
     )
 
