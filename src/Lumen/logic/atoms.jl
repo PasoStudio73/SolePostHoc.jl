@@ -92,26 +92,35 @@ end
 # ---------------------------------------------------------------------------- #
 #                                  get atoms                                   #
 # ---------------------------------------------------------------------------- #
-function get_atoms(e::ExtractRulesData, i::Int; float_type::Type=Float64)
-    truths = truths_by_groups(e, i)
-    thresholds = get_thresholds(e; prev_float=false, float_type)
-    featurenames = get_featurenames(e)
-    op_families = get_op_families(e)
+function get_atoms(
+    classnames::Vector{S},
+    predictions::Vector{S},
+    combinations::LazyProduct{T},
+    thresholds::Vector{Vector{T}},
+    featurenames::Vector{Symbol},
+    i::Int
+) where {S<:SM.CLabel,T<:Float}
+    truths = truths_by_groups(
+        classnames,
+        predictions,
+        combinations,
+        thresholds,
+        i
+    )
 
-    get_atoms(truths, thresholds, featurenames, op_families)
+    get_atoms(truths, thresholds, featurenames)
 end
 
 function get_atoms(
     truths::Vector{Vector{BitVector}},
     thresholds::Vector{T},
-    featurenames::Vector{Symbol},
-    op_families::Vector{Symbol}
+    featurenames::Vector{Symbol}
 ) where {T<:Vector{<:Float}}
     conjuncts = Vector{Vector{SL.Atom}}(undef, length(truths))
 
     Threads.@threads for i in eachindex(truths)
         conjuncts[i] =
-            generate_disjunct(truths[i], thresholds, featurenames, op_families)
+            generate_disjunct(truths[i], thresholds, featurenames)
     end
 
     return conjuncts

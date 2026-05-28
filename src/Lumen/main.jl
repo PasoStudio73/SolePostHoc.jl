@@ -19,18 +19,20 @@ const Float = Union{Float32,Float64}
 
 include("lazyproduct.jl")
 include("config.jl")
-include("rulesdata.jl")
 
 include("logic/operators.jl")
 include("logic/atoms.jl")
 include("logic/thresholds.jl")
 include("logic/predictions.jl")
 include("logic/apply.jl")
+include("logic/disjuncts.jl")
+include("logic/truths.jl")
 
 include("minimization/depth.jl")
 include("minimization/pla.jl")
 include("minimization/minimizations.jl")
 include("minimization/combinations.jl")
+include("minimization/formulas.jl")
 
 export lumen, LumenRuleExtractor, LumenResult
 
@@ -150,13 +152,12 @@ function lumen(
 )
     featurenames = SM.info(model, :featurenames)
     classnames = unique!(SM.info(model, :supporting_labels))
+    nclasses = length(classnames)
     max_combs = get_max_combs(config)
     rng = get_rng(config)
     normalize = get_normalize_atoms(config)
     type = get_float_type(config)
 
-    @show max_combs
-    @show rng
     atoms = extract_atoms(model; normalize)
     features = get_features(atoms)
 
@@ -183,6 +184,24 @@ function lumen(
     )
 
     predictions = collect_predictions(model, combinations; max_combs, rng)
+
+    formulas = collect_formulas(
+        config,
+        classnames,
+        predictions,
+        combinations,
+        thresholds,
+        featurenames,
+        nclasses,
+        type
+    )
+
+    valid_mask = .!isempty.(formulas)
+    formulas = formulas[valid_mask]
+    classnames = classnames[valid_mask]
+
+    return SM.DecisionSet(
+        SM.Rule.(SL.LeftmostDisjunctiveForm.(formulas), classnames))
 
 
 

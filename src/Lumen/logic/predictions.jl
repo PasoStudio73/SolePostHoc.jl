@@ -1,3 +1,6 @@
+# ---------------------------------------------------------------------------- #
+#                                 predictions                                  #
+# ---------------------------------------------------------------------------- #
 function collect_predictions(
     model::Union{SM.Branch{S},SM.DecisionEnsemble{S}},
     combinations::LazyProduct{T};
@@ -20,7 +23,7 @@ function collect_predictions(
     else
         Vector{S}(undef, ncombs)
     end
-@show ncombs
+
     Threads.@threads for i in eachindex(sampled_idxs)
         predictions[i] = apply(model, combinations[sampled_idxs[i]])
     end

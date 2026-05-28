@@ -128,17 +128,17 @@ end
 """
     run_minimization(
         ::Val{:abc},
-        extractor::LumenRuleExtractor,
+        config::LumenRuleExtractor,
         atoms::Vector{Vector{SL.Atom}}
     ) -> Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure}}
 
 Minimize the DNF formula encoded by `atoms` using the ABC framework.
 
-Delegates to `abc_minimize` with the binary path from `extractor`, then
+Delegates to `abc_minimize` with the binary path from `config`, then
 applies [`_refine_dnf`](@ref) to remove dominated terms.
 
 # Arguments
-- `extractor::LumenRuleExtractor`: Provides the ABC binary path and depth parameter.
+- `config::LumenRuleExtractor`: Provides the ABC binary path and depth parameter.
 - `atoms::Vector{Vector{SL.Atom}}`: Per-combination atom lists (one entry per
   input combination assigned to the target class).
 
@@ -147,7 +147,7 @@ applies [`_refine_dnf`](@ref) to remove dominated terms.
 """
 function run_minimization(
     ::Val{:abc},
-    extractor::LumenRuleExtractor,
+    config::LumenRuleExtractor,
     atoms::Vector{Vector{SL.Atom}}
 )
     ABC_jll.abc() do binary
@@ -155,8 +155,8 @@ function run_minimization(
             atoms,
             binary;
             fast=1,
-            depth=get_depth(extractor),
-            float_type=get_float_type(extractor)
+            depth=get_depth(config),
+            float_type=get_float_type(config)
         )
         return refine_dnf(minimized_formula)
     end
@@ -165,17 +165,17 @@ end
 """
     run_minimization(
         ::Val{:mitespresso},
-        extractor::LumenRuleExtractor,
+        config::LumenRuleExtractor,
         atoms::Vector{Vector{SL.Atom}}
     ) -> Vector{<:Union{SL.LeftmostConjunctiveForm{SL.Atom}, SyntaxStructure}}
 
 Minimize the DNF formula encoded by `atoms` using the MIT Espresso minimizer.
 
-Delegates to `SD.espresso_minimize` with the binary path from `extractor`, then
+Delegates to `SD.espresso_minimize` with the binary path from `config`, then
 applies [`_refine_dnf`](@ref) to remove dominated terms.
 
 # Arguments
-- `extractor::LumenRuleExtractor`: Provides the Espresso binary path and
+- `config::LumenRuleExtractor`: Provides the Espresso binary path and
   depth parameter.
 - `atoms::Vector{Vector{SL.Atom}}`: Per-combination atom lists.
 
@@ -184,16 +184,16 @@ applies [`_refine_dnf`](@ref) to remove dominated terms.
 """
 function run_minimization(
     ::Val{:mitespresso},
-    extractor::LumenRuleExtractor,
+    config::LumenRuleExtractor,
     atoms::Vector{Vector{SL.Atom}}
     # TODO mitespresso_kwargs...
 )
     minimized_formula =
         SD.espresso_minimize(
             atoms,
-            get_binary(extractor);
-            depth=get_depth(extractor),
-            float_type=get_float_type(extractor)
+            get_binary(config);
+            depth=get_depth(config),
+            float_type=get_float_type(config)
         )
 
     return _refine_dnf(minimized_formula)
