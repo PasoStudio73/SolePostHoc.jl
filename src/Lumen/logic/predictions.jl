@@ -101,7 +101,11 @@ function collect_predictions(
     sampled_idxs = if max_combs == -1
         1:possible_combs
     else
-        Random.randperm(rng, possible_combs)[1:max_combs]
+        # the number of features plays a huge role in
+        # efficency.
+        # more features less combinations computable
+        balanced_combs = round(Int, max_combs / length(combinations[1]))
+        Random.randperm(rng, possible_combs)[1:balanced_combs]
     end
 
     ncombs = length(sampled_idxs)

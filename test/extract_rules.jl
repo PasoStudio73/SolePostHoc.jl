@@ -1,5 +1,3 @@
-using RuleExtractions
-
 using SoleXplorer
 const SX = SoleXplorer
 
@@ -10,7 +8,11 @@ model_type = "RF"
 
 rng = 42
 extractors = Dict(
-    "Lumen" => SX.LumenRuleExtractor(; normalize_atoms=false, float_type=Float32),
+    "Lumen" => SX.LumenRuleExtractor(
+        max_combs=50000,
+        normalize_atoms=false,
+        float_type=Float32
+    ),
     # "INTREES" => SX.InTreesRuleExtractor(),
     # "BATREES" => SX.BATreesRuleExtractor(),
     # "RULECOSI" => SX.RULECOSIPLUSRuleExtractor(),
