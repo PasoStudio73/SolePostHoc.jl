@@ -98,6 +98,14 @@ function collect_predictions(
 ) where {S,T<:Float}
     possible_combs = length(combinations)
 
+    if iszero(possible_combs)
+        max_combs == -1 && throw(ArgumentError(
+            "Combination count overflowed Int64: " *
+            "the feature space is too large. " *
+            "Please set `max_combs` to a finite value to enable sampling."
+        ))
+    end
+
     sampled_idxs = if max_combs == -1
         1:possible_combs
     else
@@ -105,7 +113,7 @@ function collect_predictions(
         # efficency.
         # more features less combinations computable
         balanced_combs = round(Int, max_combs / length(combinations[1]))
-        Random.randperm(rng, possible_combs)[1:balanced_combs]
+        rand(rng, 1:possible_combs, balanced_combs)
     end
 
     ncombs = length(sampled_idxs)

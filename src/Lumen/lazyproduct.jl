@@ -9,7 +9,15 @@ struct LazyProduct{T,N}
         arrs = ntuple(i -> arrays[i], N)
         lens = ntuple(i -> length(arrays[i]), N)
         any(==(0), lens) && throw(ErrorException("empty array in product"))
-        total = prod(lens)
+
+        # safe product: set to 0 on Int64 overflow
+        total = try
+            t = Base.Checked.checked_mul(lens...)
+            t < 0 ? 0 : t
+        catch OverflowError
+            typemax(Int)
+        end
+
         # precompute strides for index decomposition
         strides = ntuple(N) do i
             i == 1 ? 1 : prod(lens[j] for j in 1:i-1)
