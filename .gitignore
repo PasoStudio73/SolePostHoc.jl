@@ -26,3 +26,5 @@ CondaPkg.toml
 *.toc
 *.lof
 *.lot
+test/solemodels_RF
+test/solemodels_XGB
