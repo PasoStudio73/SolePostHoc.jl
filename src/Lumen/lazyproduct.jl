@@ -18,9 +18,17 @@ struct LazyProduct{T,N}
             typemax(Int)
         end
 
-        # precompute strides for index decomposition
+        # precompute strides, clamping to typemax(Int) on overflow
         strides = ntuple(N) do i
-            i == 1 ? 1 : prod(lens[j] for j in 1:i-1)
+            i == 1 && return 1
+            foldl(1:i-1; init=1) do s, j
+                s == typemax(Int) && return typemax(Int)
+                try
+                    Base.Checked.checked_mul(s, lens[j])
+                catch OverflowError
+                    typemax(Int)
+                end
+            end
         end
         new{T,N}(arrs, lens, strides, total)
     end
