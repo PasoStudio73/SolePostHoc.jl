@@ -22,15 +22,15 @@ const LiteralBool = Dict('1' => true, '0' => false)
 # ---------------------------------------------------------------------------- #
 #                                get conjuncts                                 #
 # ---------------------------------------------------------------------------- #
-@inline _get_conjuncts(a::Vector{Vector{Atom}}) = _get_conjuncts.(a)
-@inline _get_conjuncts(a::Vector{Atom}) =
+@inline get_conjuncts(a::Vector{Vector{Atom}}) = get_conjuncts.(a)
+@inline get_conjuncts(a::Vector{Atom}) =
     isempty(a) ? ⊤ : LeftmostConjunctiveForm{Literal}(Literal.(a))
 
 # ---------------------------------------------------------------------------- #
 #                                 print utils                                  #
 # ---------------------------------------------------------------------------- #
 """
-    _featurename(f::SD.VariableValue) -> String
+    featurename(f::SD.VariableValue) -> String
 
 Return a human-readable name for a `VariableValue` feature.
 
@@ -44,7 +44,7 @@ the feature's integer index (`i_variable`).
 # Returns
 - `String`: Either `"[<name>]"` or `"V<index>"`.
 """
-function _featurename(f::SD.VariableValue)
+function featurename(f::SD.VariableValue)
     return if isnothing(f.i_name)
         f.i_variable isa Union{Symbol,AbstractString} ?
             "$(f.i_variable)" : "V$(f.i_variable)"
@@ -56,7 +56,7 @@ end
 # ---------------------------------------------------------------------------- #
 #                             disjuncts encoding                               #
 # ---------------------------------------------------------------------------- #
-function _encode_disjunct(
+function encode_disjunct(
     disjunct::SL.LeftmostConjunctiveForm{SL.Literal},
     features::Vector{<:SD.VariableValue},
     conditions::Vector{<:SD.AbstractScalarCondition},
@@ -123,7 +123,7 @@ end
 # ---------------------------------------------------------------------------- #
 #                               read conditions                                #
 # ---------------------------------------------------------------------------- #
-function _read_conditions(
+function read_conditions(
     line::AbstractString,
     conditionstype::Type,
     fnames::Vector{<:VariableValue};
@@ -137,16 +137,33 @@ function _read_conditions(
         m === nothing && throw(ArgumentError("Invalid condition token: $(part)"))
 
         # reconstruct VariableValue
-        varname = Symbol(m.captures[1])
+        # varname = Symbol(m.captures[1])
 
-        i_fname = findfirst(f -> Symbol(featurename(f)) == varname, fnames)
+        # i_fname = findfirst(f -> Symbol(featurename(f)) == varname, fnames)
+        # i_fname === nothing && throw(ArgumentError("Unknown feature name: $(varname)"))
+        # i_var = fnames[i_fname].i_variable
+
+        # value = SD.VariableValue(i_var, varname)
+
+        # operator = OPERATOR_MAP[m.captures[2]]
+        # threshold = threshold = parse(float_type, m.captures[3])
+
+        # reconstruct VariableValue
+        # note: spaces were replaced with '_' during PLA writing, so we match accordingly
+        varname_pla = m.captures[1]
+
+        i_fname = findfirst(fnames) do f
+            replace(string(featurename(f)), r"\s+" => "_") == varname_pla
+        end
+
         i_fname === nothing && throw(ArgumentError("Unknown feature name: $(varname)"))
         i_var = fnames[i_fname].i_variable
+        i_name = fnames[i_fname].i_name
 
-        value = SD.VariableValue(i_var, varname)
+        value = SD.VariableValue(i_var, i_name)
 
         operator = OPERATOR_MAP[m.captures[2]]
-        threshold = threshold = parse(float_type, m.captures[3])
+        threshold = parse(float_type, m.captures[3])
 
         condition = conditionstype(value, operator, threshold)
 
@@ -262,7 +279,7 @@ function formula_to_pla(
         original_conditions = conditions
         conditions = SD.scalartiling(conditions, fnames)
         @assert length(setdiff(original_conditions, conditions)) == 0
-            "$(SoleLogics.displaysyntaxvector(setdiff(original_conditions, conditions)))"
+            "$(SL.displaysyntaxvector(setdiff(original_conditions, conditions)))"
     end
 
     conditions = SD.removeduals(conditions)
@@ -274,7 +291,9 @@ function formula_to_pla(
     @inbounds for (i, feat) in enumerate(fnames)
         feat_condindxs = findall(c->SD.feature(c) == feat, conditions)
         conds = filter(c->SD.feature(c) == feat, conditions)
-        condname = SoleLogics.syntaxstring.(conds; removewhitespaces, pretty_op)
+        condname = SL.syntaxstring.(conds; removewhitespaces, pretty_op)
+        # Replace any remaining spaces or special chars that would break PLA parsing
+        condname = replace.(condname, r"\s+" => "_")
 
         feat_condindxss[i] = feat_condindxs
         feat_condnames[i] = condname
@@ -303,11 +322,11 @@ function formula_to_pla(
         _header(conditions, feat_condnames)
     end
 
-    conjuncts = _get_conjuncts(atoms)
+    conjuncts = get_conjuncts(atoms)
     pla_onset_rows = Vector{String}(undef, length(conjuncts))
 
     Threads.@threads for i in eachindex(conjuncts)
-        row = _encode_disjunct(
+        row = encode_disjunct(
             conjuncts[i], fnames, conditions, includes, excludes, feat_condindxss
         )
         pla_onset_rows[i] =
@@ -339,12 +358,12 @@ function pla_to_formula(
     float_type::Type=Float64
 )
     lines = split(pla, '\n')
-    parsed_conditions = SoleLogics.Atom[]
+    parsed_conditions = SL.Atom[]
     binaries = String[]
 
     for line in lines
         startswith(line, ".ilb") &&
-            append!(parsed_conditions, _read_conditions(line, conditionstype, fnames; float_type))
+            append!(parsed_conditions, read_conditions(line, conditionstype, fnames; float_type))
         startswith(line, ['0', '1', '-', '|']) && append!(binaries, [line[1:(end - 2)]])
     end
 

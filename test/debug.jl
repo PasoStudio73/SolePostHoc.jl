@@ -19,7 +19,7 @@ extractor = extractors[extractor_type]
 
 solemodels_dir = joinpath(@__DIR__, "solemodels_$(model_type)")
 
-filepath = solemodels_dir * "/darwin.csv_RF"
+filepath = solemodels_dir * "/early_stage_diabetes_risk_prediction_dataset.csv_RF"
 
 dataset_name = basename(filepath)
 solemodel = deserialize(filepath)
