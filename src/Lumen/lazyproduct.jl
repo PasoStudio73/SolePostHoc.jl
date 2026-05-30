@@ -12,11 +12,14 @@ struct LazyProduct{T,N}
 
         # safe product: set to 0 on Int64 overflow
         total = try
-            t = Base.Checked.checked_mul(lens...)
-            t < 0 ? 0 : t
+            foldl(lens; init=1) do acc, l
+                Base.Checked.checked_mul(acc, l)
+            end
         catch OverflowError
             typemax(Int)
         end
+
+        @show total
 
         # precompute strides, clamping to typemax(Int) on overflow
         strides = ntuple(N) do i
