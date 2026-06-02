@@ -19,8 +19,6 @@ struct LazyProduct{T,N}
             typemax(Int)
         end
 
-        @show total
-
         # precompute strides, clamping to typemax(Int) on overflow
         strides = ntuple(N) do i
             i == 1 && return 1

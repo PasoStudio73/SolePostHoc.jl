@@ -71,7 +71,7 @@ function setup_quine() end # TODO: evaluate this minimizer
 function abc_minimize(
     atoms::Vector{Vector{SL.Atom}},
     binary::String;
-    fast::Int64=1,
+    command::Symbol=:collapse,
     allow_scalar_range_conditions::Bool=false,
     depth::Real=1.0,
     float_type::Type=Float64
@@ -91,16 +91,19 @@ function abc_minimize(
         
         write(inputfile, pla_string)
 
-        abc_commands = if fast == 1
-            "read $inputfile; strash; collapse; write $outputfile"
-        elseif fast == 0
-            "read $inputfile; strash; balance; rewrite; refactor; " *
-            "balance; rewrite -z; collapse; sop; fx; strash; " *
-            "balance; collapse; write $outputfile"
-        else
-            "read $inputfile; sop; strash; dc2; collapse; " *
-            "strash; dc2; collapse; sop; write $outputfile"
-        end
+        commands = Dict(
+            :collapse =>
+                "read $inputfile; strash; collapse -B 10000; write $outputfile",
+            :double_collapse =>
+                "read $inputfile; sop; strash; dc2; collapse; " *
+                "strash; dc2; collapse; sop; write $outputfile",
+            :refactor =>
+                "read $inputfile; strash; balance; rewrite; refactor; " *
+                "balance; rewrite -z; renode; sop; fx; strash; " *
+                "balance; collapse; write $outputfile"
+        )
+
+        abc_commands = commands[command]
 
         # Execute ABC with error handling
         try
@@ -148,13 +151,14 @@ applies [`_refine_dnf`](@ref) to remove dominated terms.
 function run_minimization(
     ::Val{:abc},
     config::LumenRuleExtractor,
-    atoms::Vector{Vector{SL.Atom}}
+    atoms::Vector{Vector{SL.Atom}},
+    command::Symbol
 )
     ABC_jll.abc() do binary
         minimized_formula = abc_minimize(
             atoms,
             binary;
-            fast=1,
+            command,
             depth=get_depth(config),
             float_type=get_float_type(config)
         )
@@ -185,7 +189,7 @@ applies [`_refine_dnf`](@ref) to remove dominated terms.
 function run_minimization(
     ::Val{:mitespresso},
     config::LumenRuleExtractor,
-    atoms::Vector{Vector{SL.Atom}}
+    atoms::Vector{Vector{SL.Atom}},
     # TODO mitespresso_kwargs...
 )
     minimized_formula =

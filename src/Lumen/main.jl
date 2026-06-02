@@ -184,6 +184,7 @@ function lumen(
         featurenames,
         op_families,
         nclasses,
+        get_command(config),
         normalize,
         type
     )

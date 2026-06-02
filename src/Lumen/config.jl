@@ -31,6 +31,13 @@ validation and resolves the correct minimizer binary before storing anything.
 | `:abc` | Berkeley ABC | Fast, moderate compression. |
 | `:quine` | Quine–McCluskey | Exact minimisation. |
 
+# Supported ABC commands (only when `minimization_scheme = :abc`)
+
+| Command | Notes |
+|---------|-------|
+| `:collapse` | BDD-based collapsing. May hang on large inputs. |
+| `:fraig` | SAT-sweeping. More robust, recommended for large inputs. |
+
 # Validation
 
 The constructor throws `ArgumentError` when:
@@ -70,6 +77,7 @@ See also: [`lumen`](@ref), [`LumenResult`](@ref), [`AbstractConfig`](@ref)
 struct LumenRuleExtractor <: SM.RuleExtractor
     minimization_scheme::Symbol
     max_combs::Int
+    command::Symbol
     depth::Float64
     apply_function::Base.Callable
     normalize_atoms::Bool
@@ -79,6 +87,7 @@ struct LumenRuleExtractor <: SM.RuleExtractor
     function LumenRuleExtractor(;
         minimization_scheme::Symbol=:abc,
         max_combs::Int=-1,
+        command::Symbol=:collapse,
         depth::Float64=1.0,
         apply_function::Base.Callable=SM.apply,
         normalize_atoms::Bool=false,
@@ -98,6 +107,7 @@ struct LumenRuleExtractor <: SM.RuleExtractor
         new(
             minimization_scheme,
             max_combs,
+            command,
             depth,
             apply_function,
             normalize_atoms,
@@ -127,6 +137,19 @@ Since combination counts grow factorially, setting a finite cap is recommended
 for large problems to avoid memory exhaustion.
 """
 @inline get_max_combs(r::LumenRuleExtractor) = r.max_combs
+
+"""
+    get_command(r::LumenRuleExtractor) -> Symbol
+
+Return the ABC command used for minimization.
+
+Relevant only when `minimization_scheme = :abc`. Supported values:
+- `:collapse`: BDD-based global collapsing. May hang on large circuits.
+- `:fraig`: SAT-sweeping based reduction. More robust for large inputs.
+
+See also: [`LumenRuleExtractor`](@ref)
+"""
+@inline get_command(r::LumenRuleExtractor) = r.command
 
 """
     get_depth(r::LumenRuleExtractor) -> Float64

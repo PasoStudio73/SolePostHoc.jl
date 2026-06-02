@@ -7,6 +7,7 @@ function collect_formulas(
     featurenames::Vector{Symbol},
     op_families::Vector{Symbol},
     nclasses::Int,
+    command::Symbol,
     normalize::Bool,
     type::Type
 ) where {S<:SM.CLabel,T<:Float}
@@ -30,7 +31,7 @@ function collect_formulas(
         filtered = filter(!isempty, atoms)
         formulas[i] = isempty(filtered) ?
             SL.Atom{SD.AbstractCondition}[] :
-            run_minimization(Val(:abc), config, atoms)
+            run_minimization(Val(:abc), config, atoms, command)
     end
 
     return formulas

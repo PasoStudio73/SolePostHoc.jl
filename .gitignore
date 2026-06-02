@@ -28,3 +28,4 @@ CondaPkg.toml
 *.lot
 test/solemodels_RF
 test/solemodels_XGB
+test/solemodels_RF_Lumen
