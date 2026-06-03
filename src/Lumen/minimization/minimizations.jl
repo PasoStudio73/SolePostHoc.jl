@@ -93,14 +93,21 @@ function abc_minimize(
 
         commands = Dict(
             :collapse =>
-                "read $inputfile; strash; collapse -B 10000; write $outputfile",
+                "read $inputfile; strash; collapse; write $outputfile",
             :double_collapse =>
                 "read $inputfile; sop; strash; dc2; collapse; " *
                 "strash; dc2; collapse; sop; write $outputfile",
             :refactor =>
                 "read $inputfile; strash; balance; rewrite; refactor; " *
                 "balance; rewrite -z; renode; sop; fx; strash; " *
-                "balance; collapse; write $outputfile"
+                "balance; collapse; write $outputfile",
+            :test =>
+                # "read $inputfile; strash; refactor; collapse; write $outputfile",
+                # "read $inputfile; strash; collapse -r no -o yes. -d yes; write $outputfile",
+                # "read $inputfile; strash; collapse -r no; write $outputfile",
+                # "read $inputfile; strash; collapse -o yes; write $outputfile",
+                # "read $inputfile; strash; collapse -d yes; write $outputfile",
+                "read $inputfile; strash; collapse -r no -d yes; write $outputfile",
         )
 
         abc_commands = commands[command]
