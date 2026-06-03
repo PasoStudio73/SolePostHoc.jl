@@ -106,7 +106,7 @@ function collect_predictions(
         ))
     end
 
-    sampled_idxs = if max_combs == -1
+    sampled_idxs = if max_combs == -1 || max_combs > possible_combs
         1:possible_combs
     else
         # the number of features plays a huge role in

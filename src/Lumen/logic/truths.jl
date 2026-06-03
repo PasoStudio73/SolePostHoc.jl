@@ -56,6 +56,6 @@ function truths_by_groups(
     i::Int
 ) where {S<:SM.CLabel,T<:Float}
     idxs = findall(==(classnames[i]), predictions)
-    truths = [get_truths(combinations, thresholds, i) for i in idxs]
+    truths = [get_truths(combinations, thresholds, idx) for idx in idxs]
     return isempty(truths) ? Vector{BitVector}[] : truths
 end
