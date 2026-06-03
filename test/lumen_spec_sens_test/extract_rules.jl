@@ -14,11 +14,6 @@ extractors = Dict(
         float_type=Float32,
         rng=Xoshiro(rng)
     ),
-    # "INTREES" => SX.InTreesRuleExtractor(),
-    # "BATREES" => SX.BATreesRuleExtractor(),
-    # "RULECOSI" => SX.RULECOSIPLUSRuleExtractor(),
-    # "REFNE" => SX.REFNERuleExtractor(; L=2),
-    # "TREPAN" => SX.TREPANRuleExtractor()
 )
 extractor_type = "Lumen"
 extractor = extractors[extractor_type]

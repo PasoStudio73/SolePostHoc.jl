@@ -72,7 +72,7 @@ function extract_atoms(
 end
 
 function extract_atoms(
-    model::SM.DecisionEnsemble{T};
+    model::Union{SM.DecisionEnsemble{T},SM.DecisionXGBoost{T}};
     normalize::Bool=false,
     out_unique::Bool=true
 )::Vector{SL.Atom{SD.ScalarCondition}} where {T<:SM.Label}

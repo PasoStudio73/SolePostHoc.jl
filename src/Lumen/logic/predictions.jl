@@ -59,7 +59,7 @@ function apply(
 end
 
 function apply(
-    model::SM.DecisionEnsemble{S},
+    model::Union{SM.DecisionEnsemble{S},SM.DecisionXGBoost{S}},
     combination::NTuple{N,T}
 ) where {S,N,T<:Float}
     ms = SM.models(model)
@@ -91,7 +91,7 @@ calling `apply` on each to collect predictions from `model`.
 A vector of predictions, one per sampled combination.
 """
 function collect_predictions(
-    model::Union{SM.Branch{S},SM.DecisionEnsemble{S}},
+    model::Union{SM.Branch{S},SM.DecisionEnsemble{S},SM.DecisionXGBoost{S}},
     combinations::LazyProduct{T};
     max_combs::Int,
     rng::Random.AbstractRNG=Random.TaskLocalRNG()

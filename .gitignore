@@ -29,5 +29,8 @@ CondaPkg.toml
 test/solemodels_RF
 test/solemodels_XGB
 test/solemodels_RF_Lumen
+test/solemodels_XGB_Lumen
 test/lumen_spec_sens_test/solemodels_RF
 test/lumen_spec_sens_test/solemodels_XGB
+test/lumen_spec_sens_test/solemodels_RF_Lumen
+test/lumen_spec_sens_test/solemodels_XGB_Lumen

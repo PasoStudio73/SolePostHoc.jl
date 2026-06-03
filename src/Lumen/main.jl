@@ -9,6 +9,7 @@ const SD = SoleData
 
 using Random
 using CategoricalArrays
+const CA = CategoricalArrays
 using DataFrames
 using IterTools
 
@@ -150,8 +151,9 @@ function lumen(
     model::SM.AbstractModel
 )
     featurenames = SM.info(model, :featurenames)
-    classnames = unique!(SM.info(model, :supporting_labels))
-    nclasses = length(classnames)
+    # classnames = Vector{CA.CategoricalValue{String,UInt32}}(
+    #     unique!(String.(SM.info(model, :supporting_labels))))
+    # nclasses = length(classnames)
     max_combs = get_max_combs(config)
     rng = get_rng(config)
     normalize = get_normalize_atoms(config)
@@ -174,6 +176,10 @@ function lumen(
     )
     combinations = extract_combinations(thresholds)
     predictions = collect_predictions(model, combinations; max_combs, rng)
+
+    classnames = unique!(convert(
+        Vector{eltype(predictions)}, (SM.info(model, :supporting_labels))))
+    nclasses = length(classnames)
 
     formulas = collect_formulas(
         config,
