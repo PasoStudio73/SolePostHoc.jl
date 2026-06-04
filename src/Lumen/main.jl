@@ -183,8 +183,6 @@ function lumen(
     combinations = extract_combinations(thresholds)
     predictions = collect_predictions(model, combinations; max_combs, rng)
 
-    @show predictions
-
     classnames = unique!(convert(
         Vector{eltype(predictions)}, (SM.info(model, :supporting_labels))))
     nclasses = length(classnames)
