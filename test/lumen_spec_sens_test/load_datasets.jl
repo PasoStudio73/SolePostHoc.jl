@@ -5,7 +5,7 @@ using DataFrames, CSV, Serialization
 
 # datatreatments parameters
 rng = 42
-float_type = Float32
+float_type = Float64
 
 # solexplorer parameters
 models = Dict(
