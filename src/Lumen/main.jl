@@ -7,16 +7,25 @@ const SL = SoleLogics
 const SM = SoleModels
 const SD = SoleData
 
-using Random
 using CategoricalArrays
 const CA = CategoricalArrays
+using Random
 using DataFrames
 using IterTools
+using StatsBase: countmap
 
 using ABC_jll
 
 const Operators = Union{typeof(<),typeof(>),typeof(≤),typeof(≥)}
 const Float = Union{Float32,Float64}
+
+# ABC_jll
+# cd /home/paso/Documents/abc/Yggdrasil/A/ABC
+# julia --project=/home/paso/Documents/abc/Yggdrasil build_tarballs.jl --deploy=local
+
+# using Pkg
+# Pkg.develop(path=expanduser("~/.julia/dev/ABC_jll"))
+# using ABC_jll
 
 include("lazyproduct.jl")
 include("config.jl")
@@ -151,9 +160,6 @@ function lumen(
     model::SM.AbstractModel
 )
     featurenames = SM.info(model, :featurenames)
-    # classnames = Vector{CA.CategoricalValue{String,UInt32}}(
-    #     unique!(String.(SM.info(model, :supporting_labels))))
-    # nclasses = length(classnames)
     max_combs = get_max_combs(config)
     rng = get_rng(config)
     normalize = get_normalize_atoms(config)
@@ -176,6 +182,8 @@ function lumen(
     )
     combinations = extract_combinations(thresholds)
     predictions = collect_predictions(model, combinations; max_combs, rng)
+
+    @show predictions
 
     classnames = unique!(convert(
         Vector{eltype(predictions)}, (SM.info(model, :supporting_labels))))

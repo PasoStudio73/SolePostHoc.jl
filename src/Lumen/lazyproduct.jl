@@ -38,6 +38,7 @@ end
 Base.length(lp::LazyProduct) = lp.total
 Base.size(lp::LazyProduct) = (lp.total,)
 Base.keys(lp::LazyProduct) = 1:lp.total
+Base.lastindex(lp::LazyProduct) = lp.total
 Base.IndexStyle(::Type{<:LazyProduct}) = IndexLinear()
 
 @inline function Base.getindex(lp::LazyProduct{T,N}, idx::Int) where {T,N}

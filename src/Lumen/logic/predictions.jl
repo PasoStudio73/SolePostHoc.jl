@@ -69,7 +69,7 @@ function apply(
         preds[i] = apply(ms[i], combination)
     end
 
-    return argmax(x -> count(==(x), preds), unique(preds))
+    return bestguess(preds)
 end
 
 # ---------------------------------------------------------------------------- #
@@ -130,4 +130,34 @@ function collect_predictions(
     end
 
     return predictions
+end
+
+# ---------------------------------------------------------------------------- #
+#                               parity best guess                              #
+# ---------------------------------------------------------------------------- #
+# Classification: (weighted) majority vote
+function bestguess(
+    labels::Vector{SM.Label};
+    weights::Vector{<:Real}=Float32[],
+    parity_func::Base.Callable=x->argmax(x)
+)
+    length(labels) == 0 && return Dict{SM.Label, Int}()
+
+    counts = begin
+        if isempty(weights)
+            # return StatsBase.mode(labels) ..?
+            countmap(labels)
+        else
+            @assert length(labels)===length(weights) "Cannot compute " *
+                "best guess with mismatching number of votes " *
+                "$(length(labels)) and weights $(length(weights))."
+            countmap(labels, weights)
+        end
+    end
+
+    if sum(counts[argmax(counts)] .== values(counts)) > 1
+        parity_func(counts)
+    else
+        argmax(counts)
+    end
 end
