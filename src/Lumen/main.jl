@@ -40,7 +40,6 @@ include("logic/truths.jl")
 include("minimization/depth.jl")
 include("minimization/pla.jl")
 include("minimization/minimizations.jl")
-include("minimization/combinations.jl")
 include("minimization/formulas.jl")
 
 export lumen, LumenRuleExtractor, LumenResult

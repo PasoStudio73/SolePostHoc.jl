@@ -5,12 +5,12 @@ using DataFrames, CSV, Serialization
 
 # datatreatments parameters
 rng = 42
-float_type = Float64
+float_type = Float32
 
 # solexplorer parameters
 models = Dict(
     "RF" => SX.RandomForestClassifier(n_trees=20, max_depth=3),
-    "XGB" => SX.XGBoostClassifier(num_round=40, max_depth=4, seed=rng),
+    "XGB" => SX.XGBoostClassifier(num_round=40, max_depth=3, seed=rng),
 )
 resampling = SX.CV(; nfolds=5, shuffle=true, rng)
 
