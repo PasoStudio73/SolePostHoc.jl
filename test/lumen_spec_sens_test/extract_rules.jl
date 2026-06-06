@@ -9,10 +9,10 @@ model_types = ["RF", "XGB"]
 rng = 42
 extractors = Dict(
     "Lumen" => SX.LumenRuleExtractor(
-        # command=:collapse,
-        # normalize_atoms=false,
-        # float_type=Float64,
-        # rng=Xoshiro(rng)
+        command=:collapse,
+        normalize_atoms=false,
+        float_type=Float32,
+        rng=Xoshiro(rng)
     ),
 )
 extractor_type = "Lumen"

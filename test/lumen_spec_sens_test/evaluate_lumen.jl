@@ -10,8 +10,7 @@ const SM = SoleModels
 using Random
 using Serialization
 
-# model_types = ["RF_Lumen", "XGB_Lumen"]
-model_types = ["RF_Lumen"]
+model_types = ["RF_Lumen"] #, "XGB_Lumen"]
 
 for model_type in model_types
     solemodels_dir = joinpath(@__DIR__, "solemodels_$(model_type)")
@@ -21,17 +20,22 @@ for model_type in model_types
 
         @info "load dataset: $dataset_name..."
         solemodel = deserialize(filepath)
+        models = get_sole(solemodel)
 
         X_test = get_X(solemodel.ds, :test)
-        # y_test = get_y(solemodel.ds, :test)
+        y_test = get_y(solemodel.ds, :test)
 
         for i in eachindex(solemodel.rules)
             # create logiset from test features
-            logiset = SD.scalarlogiset(X_test[i]; allow_propositional=true)
-            # logiset = PropositionalLogiset(X_test[i])
+            logiset = PropositionalLogiset(X_test[i])
+
+            predictions = SX.supporting_predictions(models[i])
 
             # predict
-            y_test = apply(solemodel.sole[i], logiset)
+            # predictions = apply(
+            #     solemodel.sole[i],
+            #     logiset,
+            #     suppress_parity_warning=true)
 
             model_rules = SM.rules(solemodel.rules[i])
 
@@ -39,7 +43,7 @@ for model_type in model_types
                 r -> SM.evaluaterule(
                     r,
                     logiset,
-                    y_test,
+                    predictions,
                     compute_explanations=true,
                 ),
                 model_rules,

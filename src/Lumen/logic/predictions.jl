@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------- #
-#                              checkconditions                                 #
+#                                   utils                                      #
 # ---------------------------------------------------------------------------- #
 """
     checkcondition(cond, combination) -> Bool
@@ -22,7 +22,7 @@ function checkcondition(
 end
 
 # ---------------------------------------------------------------------------- #
-#                                   apply                                      #
+#                            apply decision trees                              #
 # ---------------------------------------------------------------------------- #
 """
     apply(model, combination) -> outcome
@@ -59,7 +59,7 @@ function apply(
 end
 
 function apply(
-    model::Union{SM.DecisionEnsemble{S},SM.DecisionXGBoost{S}},
+    model::SM.DecisionEnsemble{S},
     combination::NTuple{N,T}
 ) where {S,N,T<:Float}
     ms = SM.models(model)
@@ -69,7 +69,57 @@ function apply(
         preds[i] = apply(ms[i], combination)
     end
 
-    return bestguess(preds)
+    return bestguess(preds; parity_func=x->argmax(x))
+end
+
+# ---------------------------------------------------------------------------- #
+#                                apply xgboost                                 #
+# ---------------------------------------------------------------------------- #
+apply_leaf_scores(
+    model::SM.ConstantModel{S},
+    ::NTuple{N,T}
+) where {S,N,T<:Float} = SM.outcome(model), SM.outcome_leaf_value(model)
+
+function apply_leaf_scores(
+    model::Branch{S},
+    combination::NTuple{N,T}
+) where {S,N,T<:Float}
+    cond = SL.value(SM.antecedent(model))
+    checkmask = checkcondition(cond, combination)
+
+    return checkmask ?
+        apply_leaf_scores(SM.posconsequent(model), combination) :
+        apply_leaf_scores(SM.negconsequent(model), combination)
+end
+
+function apply(
+    model::DecisionXGBoost{S},
+    combination::NTuple{N,T}
+) where {S,N,T<:Float}
+    ms = SM.models(model)
+    nmodels = SM.nmodels(model)
+    preds = Vector{Tuple{SM.Label,T}}(undef, nmodels)
+
+    Threads.@threads for i in eachindex(ms)
+        preds[i] = apply_leaf_scores(ms[i], combination)
+    end
+
+    # multiple classification:
+    # we expect X_test * classlabels * nrounds trees, because for every round,
+    # XGBoost creates a tree for every classlabel.
+    # So, in every subm model, we'll find as much trees as classlabels.
+    supporting_labels = sort(unique(model.info.supporting_labels))
+
+    if length(supporting_labels) ≤ 2
+        # binary: sum leaf scores and threshold at 0
+        score = sum(p[2] for p in preds) / nmodels
+        return score > zero(T) ?
+            last(supporting_labels) :
+            first(supporting_labels)
+    else
+        # multiclass: leaf weighted majority vote
+        return bestguess(preds, unique!(supporting_labels))
+    end
 end
 
 # ---------------------------------------------------------------------------- #
@@ -139,13 +189,12 @@ end
 function bestguess(
     labels::Vector{SM.Label};
     weights::Vector{<:Real}=Float32[],
-    parity_func::Base.Callable=x->argmax(x)
+    parity_func::Base.Callable
 )
     length(labels) == 0 && return Dict{SM.Label, Int}()
 
     counts = begin
         if isempty(weights)
-            # return StatsBase.mode(labels) ..?
             countmap(labels)
         else
             @assert length(labels)===length(weights) "Cannot compute " *
@@ -160,4 +209,23 @@ function bestguess(
     else
         argmax(counts)
     end
+end
+
+function bestguess(
+    preds::Vector{Tuple{SM.Label,T}},
+    classlabels::AbstractVector{<:SM.Label};
+) where T
+    length(preds) == 0 && return nothing
+
+    nclass = length(classlabels)
+    class_sums = [0.0 for i in 1:nclass]
+
+    for (i, (_, value)) in enumerate(preds)
+        class_idx = ((i - 1) % nclass) + 1
+        class_sums[class_idx] += value
+    end
+
+    class_sums = exp.(class_sums)
+
+    return classlabels[argmax(class_sums)]
 end
