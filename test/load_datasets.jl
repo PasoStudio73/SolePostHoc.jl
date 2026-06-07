@@ -16,8 +16,7 @@ models = Dict(
     "RF" => SX.RandomForestClassifier(n_trees=25),
     "XGB" => SX.XGBoostClassifier(num_round=50, seed=rng),
 )
-resampling = SX.CV(; nfolds=5, shuffle=true, rng)
-# resampling = SX.Holdout(; fraction_train=0.7, shuffle=true, rng)
+resampling = SX.Holdout(; fraction_train=0.7, shuffle=true, rng)
 
 measures = (SX.Accuracy(),)
 

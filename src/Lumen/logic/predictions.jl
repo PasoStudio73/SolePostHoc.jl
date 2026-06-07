@@ -144,7 +144,46 @@ function collect_predictions(
     model::Union{SM.Branch{S},SM.DecisionEnsemble{S},SM.DecisionXGBoost{S}},
     combinations::LazyProduct{T}
 ) where {S,T<:Float}
-    ncombs = length(combinations)
+    # ncombs = length(combinations)
+
+    # @show ncombs
+
+    # predictions = if model isa SM.DecisionEnsemble
+    #     O = typeof(apply(model, combinations[1]))
+    #     Vector{O}(undef, ncombs)
+    # else
+    #     Vector{S}(undef, ncombs)
+    # end
+
+    # Threads.@threads for i in 1:ncombs
+    #     predictions[i] = apply(model, combinations[i])
+    # end
+
+    # return predictions
+
+    possible_combs = length(combinations)
+
+    if iszero(possible_combs)
+        throw(ArgumentError(
+            "Combination count overflowed Int64: " *
+            "the feature space is too large. " *
+            "Please set `max_combs` to a finite value to enable sampling."
+        ))
+    end
+
+    sampled_idxs = # if max_combs == -1 || max_combs > possible_combs
+        1:possible_combs
+    # else
+    #     # the number of features plays a huge role in
+    #     # efficency.
+    #     # more features less combinations computable
+    #     # balanced_combs = round(Int, max_combs / length(combinations[1]))
+    #     balanced_combs = max_combs
+    #     # sample(rng, 1:possible_combs, balanced_combs; replace=false)
+    #     sort(sample(rng, 1:possible_combs, balanced_combs; replace=false))
+    # end
+
+    ncombs = length(sampled_idxs)
 
     @show ncombs
 
@@ -155,8 +194,8 @@ function collect_predictions(
         Vector{S}(undef, ncombs)
     end
 
-    Threads.@threads for i in 1:ncombs
-        predictions[i] = apply(model, combinations[i])
+    Threads.@threads for i in eachindex(sampled_idxs)
+        predictions[i] = apply(model, combinations[sampled_idxs[i]])
     end
 
     return predictions

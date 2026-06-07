@@ -12,7 +12,7 @@ const CA = CategoricalArrays
 using Random
 using DataFrames
 using IterTools
-using StatsBase: countmap, sample
+using StatsBase: countmap, sample, quantile
 
 using ABC_jll
 
