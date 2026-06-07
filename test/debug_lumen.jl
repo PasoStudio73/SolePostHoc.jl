@@ -12,7 +12,7 @@ using Serialization
 
 model_types = ["RF_Lumen", "XGB_Lumen"]
 
-solemodel = deserialize("/home/paso/paso_workspace/Aclai/SolePostHoc.jl/test/solemodels_RF/iris.csv_RF")
+solemodel = deserialize("/home/paso/Documents/Aclai/SolePostHoc.jl/test/solemodels_RF/iris.csv_RF")
 
 rng = 42
 extractor = SX.LumenRuleExtractor(

@@ -184,7 +184,7 @@ function lumen(
         boundary=true
     )
     combinations = extract_combinations(thresholds)
-    predictions = collect_predictions(model, combinations; max_combs, rng)
+    predictions = collect_predictions(model, combinations)
 
     classnames = unique!(convert(
         Vector{eltype(predictions)}, (SM.info(model, :supporting_labels))))

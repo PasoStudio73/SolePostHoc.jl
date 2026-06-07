@@ -67,8 +67,8 @@ function extract_thresholds(
         end
     end
 
-    prune_thresholds_by_class_boundary(thresholds,X,y)
-    # return thresholds
+    # prune_thresholds_by_class_boundary(thresholds,X,y)
+    return thresholds
 end
 
 """
