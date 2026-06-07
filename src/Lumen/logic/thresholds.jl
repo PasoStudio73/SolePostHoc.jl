@@ -36,9 +36,11 @@ function extract_thresholds(
     features::Vector{Symbol},
     featurenames::Vector{Symbol},
     op_families::Vector{Symbol},
+    X::Union{DataFrame,SubDataFrame},
+    y::SubArray{C},
     ::Type{S}=Float32;
     boundary::Bool=false
-)::Vector{Vector{S}} where {T,S}
+)::Vector{Vector{S}} where {T,S,C<:CategoricalArrays.CategoricalValue}
     thresholds = Vector{Vector{S}}(undef, length(featurenames))
 
     @inbounds for i in eachindex(featurenames)
@@ -65,7 +67,8 @@ function extract_thresholds(
         end
     end
 
-    return thresholds
+    prune_thresholds_by_class_boundary(thresholds,X,y)
+    # return thresholds
 end
 
 """
@@ -99,15 +102,85 @@ function extract_thresholds(
     features::Vector{Vector{Symbol}},
     featurenames::Vector{Symbol},
     op_families::Vector{Symbol},
+    X::Union{DataFrame,SubDataFrame},
+    y::SubArray{C},
     ::Type{S}=Float32;
     kwargs...
-)::Vector{Vector{Vector{S}}} where {T,S}
+)::Vector{Vector{Vector{S}}} where {T,S,C<:CategoricalArrays.CategoricalValue}
     @assert length(atoms) == length(features) 
         "atoms and features must have the same length " *
         "(got $(length(atoms)) and $(length(features)))"
 
     map((a, f) -> extract_thresholds(
-        a, f, featurenames, op_families, S; kwargs...),
+        a, f, featurenames, op_families, X, y, S; kwargs...),
         atoms, features
     )
+end
+
+"""
+    prune_thresholds_by_class_boundary(
+        thresholds::Vector{Vector{S}},
+        X::AbstractMatrix{S},
+        y::AbstractVector,
+        featurenames::Vector{Symbol};
+        max_per_feature::Int = 8
+    ) -> Vector{Vector{S}}
+
+Reduce thresholds by keeping only class-boundary points from training data.
+Always preserves the last element (boundary sentinel).
+
+The Core Insight
+Two thresholds t1 and t2 in the same feature are redundant if no training sample
+falls strictly between them. They produce the same classification boundary.
+
+Algorithm: Boundary-Point Pruning
+Keep only thresholds that are class-boundary points
+— i.e., where the class label changes between consecutive sorted unique values
+        in your training data.
+"""
+function prune_thresholds_by_class_boundary(
+    thresholds::Vector{Vector{S}},
+    X::Union{DataFrame,SubDataFrame},
+    y::SubArray{C};
+    max_per_feature::Int=-1
+) where {S,C<:CategoricalArrays.CategoricalValue}
+    result = Vector{Vector{S}}(undef, length(thresholds))
+
+    for i in eachindex(thresholds)
+        tv = thresholds[i]
+        isempty(tv) && (result[i] = tv; continue)
+
+        sentinel = last(tv)       # always keep
+        candidates = tv[1:end-1]
+
+        col = X[:, i]
+        sorted_vals = sort(unique(col))
+
+        # midpoints between consecutive distinct feature values
+        midpoints = [(sorted_vals[k] + sorted_vals[k+1]) / 2
+                     for k in 1:length(sorted_vals)-1]
+
+        # a midpoint is a boundary if classes differ on its two sides
+        boundary_mids = filter(midpoints) do m
+            left_classes  = y[col .< m]
+            right_classes = y[col .>= m]
+            !isempty(left_classes) && !isempty(right_classes) &&
+                !issetequal(left_classes, right_classes)
+        end
+
+        # keep only thresholds near a boundary midpoint
+        tol = S(1e-4)
+        pruned = filter(candidates) do t
+            any(abs(t - m) < tol for m in boundary_mids)
+        end
+
+        # fallback cap if still too many
+        if max_per_feature > 0 && length(pruned) > max_per_feature
+            pruned = pruned[1:max_per_feature]
+        end
+
+        result[i] = vcat(pruned, sentinel)
+    end
+
+    return result
 end

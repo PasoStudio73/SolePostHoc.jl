@@ -44,7 +44,7 @@ for model_type in model_types
             rng
         )
 
-        dest_folder = "solemodels_$model_type"
+        dest_folder = "lumen_spec_sens_test/solemodels_$model_type"
         filename = "$(dataset_name)_$(model_type)"
         dest_dir = joinpath(dirname(@__DIR__), dest_folder)
         mkpath(dest_dir)

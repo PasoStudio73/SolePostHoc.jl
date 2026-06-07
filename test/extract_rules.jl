@@ -10,16 +10,12 @@ rng = 42
 extractors = Dict(
     "Lumen" => SX.LumenRuleExtractor(
         max_combs=50000,
-        command=:test,
+        # command=:collapse,
+        command=:safer,
         normalize_atoms=false,
         float_type=Float32,
         rng=Xoshiro(rng)
     ),
-    # "INTREES" => SX.InTreesRuleExtractor(),
-    # "BATREES" => SX.BATreesRuleExtractor(),
-    # "RULECOSI" => SX.RULECOSIPLUSRuleExtractor(),
-    # "REFNE" => SX.REFNERuleExtractor(; L=2),
-    # "TREPAN" => SX.TREPANRuleExtractor()
 )
 extractor_type = "Lumen"
 extractor = extractors[extractor_type]
@@ -39,7 +35,7 @@ for model_type in model_types
             extractor
         )
 
-        dest_folder = "solemodels_$(model_type)_$extractor_type"
+        dest_folder = "test/solemodels_$(model_type)_$extractor_type"
         filename = "$(dataset_name)_$(extractor_type)"
         dest_dir = joinpath(dirname(@__DIR__), dest_folder)
         mkpath(dest_dir)

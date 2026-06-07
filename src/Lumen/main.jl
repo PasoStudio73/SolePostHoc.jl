@@ -12,7 +12,7 @@ const CA = CategoricalArrays
 using Random
 using DataFrames
 using IterTools
-using StatsBase: countmap
+using StatsBase: countmap, sample
 
 using ABC_jll
 
@@ -156,8 +156,10 @@ See also: [`LumenRuleExtractor`](@ref), [`LumenResult`](@ref),
 """
 function lumen(
     config::LumenRuleExtractor,
-    model::SM.AbstractModel
-)
+    model::SM.AbstractModel,
+    X::Union{DataFrame,SubDataFrame},
+    y::SubArray{C}
+) where {C<:CategoricalArrays.CategoricalValue}
     featurenames = SM.info(model, :featurenames)
     max_combs = get_max_combs(config)
     rng = get_rng(config)
@@ -176,6 +178,8 @@ function lumen(
         features,
         featurenames,
         op_families,
+        X,
+        y,
         type;
         boundary=true
     )
@@ -210,23 +214,27 @@ end
 
 function lumen(
     config::LumenRuleExtractor,
-    model::Vector{SM.AbstractModel}
-)::Vector{SM.DecisionSet}
-    map(model) do m
-        lumen(config, m)
+    models::Vector{SM.AbstractModel},
+    X::Union{DataFrame,SubDataFrame},
+    y::SubArray{C}
+)::Vector{SM.DecisionSet} where {C<:CategoricalArrays.CategoricalValue}
+    map(enumerate(models)) do (i, model)
+        lumen(config, model, X[i], y[i])
     end
 end
 
-function lumen(model::SM.AbstractModel; kwargs...)::SM.DecisionSet
-    lumen(LumenRuleExtractor(; kwargs...), model)
+function lumen(model::SM.AbstractModel, args...; kwargs...)::SM.DecisionSet
+    lumen(LumenRuleExtractor(; kwargs...), model, args...)
 end
 
 function lumen(
-    model::Vector{SM.AbstractModel};
+    models::Vector{SM.AbstractModel},
+    X::Union{DataFrame,SubDataFrame},
+    y::SubArray{C};
     kwargs...
-)::Vector{SM.DecisionSet}
-    map(model) do m
-        lumen(m; kwargs...)
+)::Vector{SM.DecisionSet} where {C<:CategoricalArrays.CategoricalValue}
+    map(enumerate(models)) do (i, model)
+        lumen(model, X[i], y[i]; kwargs...)
     end
 end
 

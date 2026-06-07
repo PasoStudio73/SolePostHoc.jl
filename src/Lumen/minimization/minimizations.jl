@@ -101,13 +101,9 @@ function abc_minimize(
                 "read $inputfile; strash; balance; rewrite; refactor; " *
                 "balance; rewrite -z; renode; sop; fx; strash; " *
                 "balance; collapse; write $outputfile",
-            :safe =>
-                # "read $inputfile; strash; refactor; collapse; write $outputfile",
+            :safer =>
                 # "read $inputfile; strash; collapse -r no -o yes. -d yes; write $outputfile",
                 "read $inputfile; strash; collapse -r no; write $outputfile",
-                # "read $inputfile; strash; collapse -o yes; write $outputfile",
-                # "read $inputfile; strash; collapse -d yes; write $outputfile",
-                # "read $inputfile; strash; dc2; collapse -r no -d yes; write $outputfile",
         )
 
         abc_commands = commands[command]

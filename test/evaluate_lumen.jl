@@ -10,7 +10,7 @@ const SM = SoleModels
 using Random
 using Serialization
 
-model_types = ["RF_Lumen"] #, "XGB_Lumen"]
+model_types = ["RF_Lumen", "XGB_Lumen"]
 
 for model_type in model_types
     solemodels_dir = joinpath(@__DIR__, "solemodels_$(model_type)")

@@ -162,9 +162,14 @@ function collect_predictions(
         # the number of features plays a huge role in
         # efficency.
         # more features less combinations computable
-        balanced_combs = round(Int, max_combs / length(combinations[1]))
-        rand(rng, 1:possible_combs, balanced_combs)
+        # balanced_combs = round(Int, max_combs / length(combinations[1]))
+        balanced_combs = max_combs
+        # sample(rng, 1:possible_combs, balanced_combs; replace=false)
+        sort(sample(rng, 1:possible_combs, balanced_combs; replace=false))
     end
+
+    @show possible_combs
+    @show max_combs
 
     ncombs = length(sampled_idxs)
 

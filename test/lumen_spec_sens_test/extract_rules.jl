@@ -9,7 +9,7 @@ model_types = ["RF", "XGB"]
 rng = 42
 extractors = Dict(
     "Lumen" => SX.LumenRuleExtractor(
-        command=:collapse,
+        command=:safer,
         normalize_atoms=false,
         float_type=Float32,
         rng=Xoshiro(rng)
@@ -33,7 +33,8 @@ for model_type in model_types
             extractor
         )
 
-        dest_folder = "solemodels_$(model_type)_$extractor_type"
+        dest_folder = "lumen_spec_sens_test/" *
+            "solemodels_$(model_type)_$extractor_type"
         filename = "$(dataset_name)_$(extractor_type)"
         dest_dir = joinpath(dirname(@__DIR__), dest_folder)
         mkpath(dest_dir)

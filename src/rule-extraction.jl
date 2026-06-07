@@ -73,8 +73,8 @@ import SoleModels: isexact, extractrules
 include("Lumen/main.jl")
 @reexport using .Lumen
 
-function extractrules(config::LumenRuleExtractor, m)
-    ds = lumen(config, m)
+function extractrules(config::LumenRuleExtractor, args...)
+    ds = lumen(config, args...)
     return ds
 end
 
