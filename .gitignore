@@ -25,3 +25,7 @@ READMEc.md
 *.toc
 *.lof
 *.lot
+/test/solemodels_RF
+/test/solemodels_RF_Lumen
+/test/solemodels_XGB
+/test/solemodels_XGB_Lumen
