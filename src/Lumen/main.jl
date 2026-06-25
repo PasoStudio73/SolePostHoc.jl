@@ -156,10 +156,10 @@ See also: [`LumenRuleExtractor`](@ref), [`LumenResult`](@ref),
 """
 function lumen(
     config::LumenRuleExtractor,
-    model::SM.AbstractModel,
-    featurenames::Vector{Symbol},
-    classnames::Vector{Symbol}
+    model::SM.AbstractModel
 )
+    featurenames = get_featurenames(config)
+    classnames = get_classnames(config)
     max_combs = get_max_combs(config)
     rng = get_rng(config)
     normalize = get_normalize_atoms(config)
@@ -182,7 +182,7 @@ function lumen(
     )
     combinations = extract_combinations(thresholds)
     predictions = collect_predictions(model, combinations; max_combs, rng)
-
+@show predictions
     nclasses = length(classnames)
 
     formulas = collect_formulas(
@@ -207,30 +207,26 @@ function lumen(
     return SM.DecisionSet(rules)
 end
 
-function lumen(
-    config::LumenRuleExtractor,
-    model::Vector{SM.AbstractModel},
-    featurenames::Vector{Symbol}
+# function lumen(
+#     config::LumenRuleExtractor,
+#     model::Vector{SM.AbstractModel},
+#     args...
 # )::Vector{SM.DecisionSet}
-)
-    map(model) do m
-        lumen(config, m)
-    end
-end
+#     map(model) do m
+#         lumen(config, m)
+#     end
+# end
 
-# function lumen(model::SM.AbstractModel; kwargs...)::SM.DecisionSet
-function lumen(model::SM.AbstractModel, args...; kwargs...)
-    lumen(LumenRuleExtractor(; kwargs...), model, args...)
+function lumen(model::SM.AbstractModel; kwargs...)::SM.DecisionSet
+    lumen(LumenRuleExtractor(model; kwargs...), model)
 end
 
 function lumen(
-    model::Vector{SM.AbstractModel},
-    args...;
+    model::Vector{SM.AbstractModel};
     kwargs...
-# )::Vector{SM.DecisionSet}
-)
+)::Vector{SM.DecisionSet}
     map(model) do m
-        lumen(m, args...; kwargs...)
+        lumen(m; kwargs...)
     end
 end
 

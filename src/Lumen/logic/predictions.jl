@@ -69,7 +69,8 @@ function apply(
         preds[i] = apply(ms[i], combination)
     end
 
-    return bestguess(preds; parity_func=x->argmax(x))
+    # return bestguess(preds; parity_func=x->argmax(x))
+    return bestguess(preds; parity_func=x->first(sort(collect(keys(x)))))
 end
 
 # ---------------------------------------------------------------------------- #

@@ -75,6 +75,8 @@ cfg = LumenRuleExtractor(
 See also: [`lumen`](@ref), [`LumenResult`](@ref), [`AbstractConfig`](@ref)
 """
 struct LumenRuleExtractor <: SM.RuleExtractor
+    featurenames::Union{Nothing,Vector{Symbol}}
+    classnames::Union{Nothing,Vector{Symbol}}
     minimization_scheme::Symbol
     max_combs::Int
     command::Symbol
@@ -82,7 +84,10 @@ struct LumenRuleExtractor <: SM.RuleExtractor
     float_type::Type
     rng::Random.AbstractRNG
 
-    function LumenRuleExtractor(;
+    function LumenRuleExtractor(
+        model::SM.AbstractModel;
+        featurenames::Union{Nothing,Vector{Symbol}}=nothing,
+        classnames::Union{Nothing,Vector{Symbol}}=nothing,
         minimization_scheme::Symbol=:abc,
         max_combs::Int=-1,
         command::Symbol=:collapse,
@@ -90,6 +95,11 @@ struct LumenRuleExtractor <: SM.RuleExtractor
         float_type::Type=Float64,
         rng::Random.AbstractRNG=Random.TaskLocalRNG()
     )
+        isnothing(featurenames) &&
+            (featurenames = Symbol.(SM.info(model, :featurenames)))
+        isnothing(classnames) &&
+            (classnames = Symbol.(unique!(SM.info(model, :supporting_labels))))
+
         # validate minimization scheme
         valid_schemes = [:mitespresso, :boom, :abc, :quine]
 
@@ -101,6 +111,8 @@ struct LumenRuleExtractor <: SM.RuleExtractor
             ))
 
         new(
+            featurenames,
+            classnames,
             minimization_scheme,
             max_combs,
             command,
@@ -114,6 +126,8 @@ end
 # ---------------------------------------------------------------------------- #
 #                                  methods                                     #
 # ---------------------------------------------------------------------------- #
+@inline get_featurenames(r::LumenRuleExtractor) = r.featurenames
+@inline get_classnames(r::LumenRuleExtractor) = r.classnames
 """
     get_minimization_scheme(r::LumenRuleExtractor) -> Symbol
 

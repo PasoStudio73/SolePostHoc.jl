@@ -10,7 +10,6 @@ struct LazyProduct{T,N}
         lens = ntuple(i -> length(arrays[i]), N)
         any(==(0), lens) && throw(ErrorException("empty array in product"))
 
-        # safe product: set to 0 on Int64 overflow
         total = try
             foldl(lens; init=1) do acc, l
                 Base.Checked.checked_mul(acc, l)
@@ -19,7 +18,6 @@ struct LazyProduct{T,N}
             typemax(Int)
         end
 
-        # precompute strides, clamping to typemax(Int) on overflow
         strides = ntuple(N) do i
             i == 1 && return 1
             foldl(1:i-1; init=1) do s, j
@@ -59,3 +57,13 @@ end
 
 Base.iterate(lp::LazyProduct, state=1) =
     state > lp.total ? nothing : (@inbounds(lp[state]), state + 1)
+
+function Base.:(==)(lp::LazyProduct, other)
+    length(lp) != length(other) && return false
+    for (a, b) in zip(lp, other)
+        a != b && return false
+    end
+    return true
+end
+
+Base.:(==)(other, lp::LazyProduct) = lp == other

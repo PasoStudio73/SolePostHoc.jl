@@ -1,4 +1,6 @@
 using Test
+using SolePostHoc
+const SP = SolePostHoc
 
 using SoleXplorer
 using SoleData
@@ -6,9 +8,6 @@ using SoleModels
 const SX = SoleXplorer
 const SD = SoleData
 const SM = SoleModels
-
-using SolePostHoc
-const RE = SolePostHoc.RuleExtraction
 
 using MLJ
 using DataFrames, Random
@@ -21,9 +20,8 @@ Xc = DataFrame(Xc)
 
 model = solexplorer(
     Xc, yc;
-    model=SX.RandomForestClassifier(n_trees=10, max_depth=4)
+    model=SX.RandomForestClassifier(n_trees=5, max_depth=3, rng=Xoshiro(42))
 )
 
-extractor = LumenRuleExtractor()
 solem = get_sole(model)
-extracted_rules = lumen(solem[1])
+extracted_rules = SP.lumen(solem[1]; rng=Xoshiro(42));
