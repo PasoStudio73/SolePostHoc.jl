@@ -78,8 +78,6 @@ struct LumenRuleExtractor <: SM.RuleExtractor
     minimization_scheme::Symbol
     max_combs::Int
     command::Symbol
-    depth::Float64
-    apply_function::Base.Callable
     normalize_atoms::Bool
     float_type::Type
     rng::Random.AbstractRNG
@@ -88,8 +86,6 @@ struct LumenRuleExtractor <: SM.RuleExtractor
         minimization_scheme::Symbol=:abc,
         max_combs::Int=-1,
         command::Symbol=:collapse,
-        depth::Float64=1.0,
-        apply_function::Base.Callable=SM.apply,
         normalize_atoms::Bool=false,
         float_type::Type=Float64,
         rng::Random.AbstractRNG=Random.TaskLocalRNG()
@@ -108,8 +104,6 @@ struct LumenRuleExtractor <: SM.RuleExtractor
             minimization_scheme,
             max_combs,
             command,
-            depth,
-            apply_function,
             normalize_atoms,
             float_type,
             rng
@@ -150,20 +144,6 @@ Relevant only when `minimization_scheme = :abc`. Supported values:
 See also: [`LumenRuleExtractor`](@ref)
 """
 @inline get_command(r::LumenRuleExtractor) = r.command
-
-"""
-    get_depth(r::LumenRuleExtractor) -> Float64
-
-Return the depth coverage parameter δ ∈ (0, 1].
-"""
-@inline get_depth(r::LumenRuleExtractor) = r.depth
-
-"""
-    get_apply_function(r::LumenRuleExtractor) -> Base.Callable
-
-Return the model-application function.
-"""
-@inline get_apply_function(r::LumenRuleExtractor) = r.apply_function
 
 """
     get_normalize_atoms(r::LumenRuleExtractor) -> Bool

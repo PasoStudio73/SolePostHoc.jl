@@ -73,7 +73,6 @@ function abc_minimize(
     binary::String;
     command::Symbol=:collapse,
     allow_scalar_range_conditions::Bool=false,
-    depth::Real=1.0,
     float_type::Type=Float64
 )
     # convert formula to pla string format
@@ -162,7 +161,6 @@ function run_minimization(
             atoms,
             binary;
             command,
-            depth=get_depth(config),
             float_type=get_float_type(config)
         )
         return refine_dnf(minimized_formula)

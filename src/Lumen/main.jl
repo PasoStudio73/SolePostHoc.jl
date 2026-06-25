@@ -12,7 +12,7 @@ const CA = CategoricalArrays
 using Random
 using DataFrames
 using IterTools
-using StatsBase: countmap, sample, quantile
+using StatsBase: countmap
 
 using ABC_jll
 
@@ -157,10 +157,9 @@ See also: [`LumenRuleExtractor`](@ref), [`LumenResult`](@ref),
 function lumen(
     config::LumenRuleExtractor,
     model::SM.AbstractModel,
-    X::Union{DataFrame,SubDataFrame},
-    y::SubArray{C}
-) where {C<:CategoricalArrays.CategoricalValue}
-    featurenames = SM.info(model, :featurenames)
+    featurenames::Vector{Symbol},
+    classnames::Vector{Symbol}
+)
     max_combs = get_max_combs(config)
     rng = get_rng(config)
     normalize = get_normalize_atoms(config)
@@ -178,16 +177,12 @@ function lumen(
         features,
         featurenames,
         op_families,
-        X,
-        y,
         type;
         boundary=true
     )
     combinations = extract_combinations(thresholds)
-    predictions = collect_predictions(model, combinations)
+    predictions = collect_predictions(model, combinations; max_combs, rng)
 
-    classnames = unique!(convert(
-        Vector{eltype(predictions)}, (SM.info(model, :supporting_labels))))
     nclasses = length(classnames)
 
     formulas = collect_formulas(
@@ -214,27 +209,28 @@ end
 
 function lumen(
     config::LumenRuleExtractor,
-    models::Vector{SM.AbstractModel},
-    X::Union{DataFrame,SubDataFrame},
-    y::SubArray{C}
-)::Vector{SM.DecisionSet} where {C<:CategoricalArrays.CategoricalValue}
-    map(enumerate(models)) do (i, model)
-        lumen(config, model, X[i], y[i])
+    model::Vector{SM.AbstractModel},
+    featurenames::Vector{Symbol}
+# )::Vector{SM.DecisionSet}
+)
+    map(model) do m
+        lumen(config, m)
     end
 end
 
-function lumen(model::SM.AbstractModel, args...; kwargs...)::SM.DecisionSet
+# function lumen(model::SM.AbstractModel; kwargs...)::SM.DecisionSet
+function lumen(model::SM.AbstractModel, args...; kwargs...)
     lumen(LumenRuleExtractor(; kwargs...), model, args...)
 end
 
 function lumen(
-    models::Vector{SM.AbstractModel},
-    X::Union{DataFrame,SubDataFrame},
-    y::SubArray{C};
+    model::Vector{SM.AbstractModel},
+    args...;
     kwargs...
-)::Vector{SM.DecisionSet} where {C<:CategoricalArrays.CategoricalValue}
-    map(enumerate(models)) do (i, model)
-        lumen(model, X[i], y[i]; kwargs...)
+# )::Vector{SM.DecisionSet}
+)
+    map(model) do m
+        lumen(m, args...; kwargs...)
     end
 end
 
