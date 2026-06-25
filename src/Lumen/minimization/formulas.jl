@@ -85,7 +85,7 @@ function collect_formulas(
             normalize,
             i
         )
-        
+
         filtered = filter(!isempty, atoms)
         formulas[i] = isempty(filtered) ?
             SL.Atom{SD.AbstractCondition}[] :
