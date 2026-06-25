@@ -182,7 +182,6 @@ function lumen(
     )
     combinations = extract_combinations(thresholds)
     predictions = collect_predictions(model, combinations; max_combs, rng)
-@show predictions
     nclasses = length(classnames)
 
     formulas = collect_formulas(
